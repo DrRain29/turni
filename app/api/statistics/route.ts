@@ -17,29 +17,33 @@ function calculateShiftHours(startTime: string, endTime: string): number {
   return (endMinutes - startMinutes) / 60
 }
 
-// Funzione per ottenere l'inizio della settimana (lunedì)
+// Funzione per ottenere l'inizio della settimana (lunedì) - FIX FUSO ORARIO
 function getWeekStart(date: Date): string {
+  // Crea una nuova data evitando problemi di fuso orario
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const day = d.getDay()
   const diff = d.getDate() - day + (day === 0 ? -6 : 1)
   d.setDate(diff)
 
+  // Formatta manualmente per evitare problemi di fuso orario
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, "0")
   const dayOfMonth = String(d.getDate()).padStart(2, "0")
   return `${year}-${month}-${dayOfMonth}`
 }
 
-// Funzione per ottenere la fine della settimana (domenica)
+// Funzione per ottenere la fine della settimana (domenica) - FIX FUSO ORARIO
 function getWeekEnd(date: Date): string {
-  const weekStartDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const day = weekStartDate.getDay()
-  const diff = weekStartDate.getDate() - day + (day === 0 ? -6 : 1)
-  weekStartDate.setDate(diff + 6)
+  // Crea una nuova data evitando problemi di fuso orario
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  d.setDate(diff + 6) // Aggiungi 6 giorni per arrivare alla domenica
 
-  const year = weekStartDate.getFullYear()
-  const month = String(weekStartDate.getMonth() + 1).padStart(2, "0")
-  const dayOfMonth = String(weekStartDate.getDate()).padStart(2, "0")
+  // Formatta manualmente per evitare problemi di fuso orario
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const dayOfMonth = String(d.getDate()).padStart(2, "0")
   return `${year}-${month}-${dayOfMonth}`
 }
 
@@ -92,19 +96,21 @@ export async function GET() {
       return NextResponse.json({ error: "Errore nel caricamento degli utenti" }, { status: 500 })
     }
 
-    // Genera array dei giorni della settimana
+    // Genera array dei giorni della settimana - FIX FUSO ORARIO
     const weekDays = []
-    const startDate = new Date(weekStart + "T00:00:00")
     for (let i = 0; i < 7; i++) {
-      const day = new Date(startDate)
-      day.setDate(startDate.getDate() + i)
-      const dayString = day.toISOString().split("T")[0]
+      // Crea la data manualmente per evitare problemi di fuso orario
+      const [year, month, day] = weekStart.split("-").map(Number)
+      const dayDate = new Date(year, month - 1, day + i) // month - 1 perché i mesi partono da 0
+
+      const dayString = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, "0")}-${String(dayDate.getDate()).padStart(2, "0")}`
+
       weekDays.push({
         date: dayString,
-        dayName: day.toLocaleDateString("it-IT", { weekday: "long" }),
-        dayShort: day.toLocaleDateString("it-IT", { weekday: "short" }),
-        dayNumber: day.getDate(),
-        formatted: day.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }),
+        dayName: dayDate.toLocaleDateString("it-IT", { weekday: "long" }),
+        dayShort: dayDate.toLocaleDateString("it-IT", { weekday: "short" }),
+        dayNumber: dayDate.getDate(),
+        formatted: dayDate.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }),
       })
     }
 
@@ -167,9 +173,12 @@ export async function GET() {
     const totalShifts = userStats.reduce((sum, user) => sum + user.totalShifts, 0)
     const activeUsers = userStats.filter((user) => user.totalHours > 0).length
 
-    // Formatta le date per il frontend
-    const weekStartFormatted = new Date(weekStart + "T00:00:00").toLocaleDateString("it-IT")
-    const weekEndFormatted = new Date(weekEnd + "T00:00:00").toLocaleDateString("it-IT")
+    // Formatta le date per il frontend - FIX FUSO ORARIO
+    const [startYear, startMonth, startDay] = weekStart.split("-").map(Number)
+    const [endYear, endMonth, endDay] = weekEnd.split("-").map(Number)
+
+    const weekStartFormatted = new Date(startYear, startMonth - 1, startDay).toLocaleDateString("it-IT")
+    const weekEndFormatted = new Date(endYear, endMonth - 1, endDay).toLocaleDateString("it-IT")
 
     return NextResponse.json({
       userStats,
