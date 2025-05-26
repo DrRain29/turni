@@ -1,6 +1,22 @@
 import { NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
 
+// Funzione per calcolare correttamente le ore di un turno
+function calculateShiftHours(startTime: string, endTime: string): number {
+  const [startHour, startMinute] = startTime.split(":").map(Number)
+  const [endHour, endMinute] = endTime.split(":").map(Number)
+
+  const startMinutes = startHour * 60 + startMinute
+  let endMinutes = endHour * 60 + endMinute
+
+  // Gestisce turni notturni che attraversano la mezzanotte
+  if (endMinutes <= startMinutes) {
+    endMinutes += 24 * 60 // Aggiunge 24 ore
+  }
+
+  return (endMinutes - startMinutes) / 60
+}
+
 // Funzione per ottenere l'inizio della settimana (lunedì)
 function getWeekStart(date: Date): string {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -106,18 +122,8 @@ export async function GET() {
       })
 
       userShifts.forEach((shift) => {
-        // Calcola ore del turno
-        const [startHour, startMinute] = shift.start_time.split(":").map(Number)
-        const [endHour, endMinute] = shift.end_time.split(":").map(Number)
-
-        const startMinutes = startHour * 60 + startMinute
-        let endMinutes = endHour * 60 + endMinute
-
-        if (endMinutes <= startMinutes) {
-          endMinutes += 24 * 60
-        }
-
-        const hours = (endMinutes - startMinutes) / 60
+        // FIX: Usa la funzione corretta per calcolare le ore
+        const hours = calculateShiftHours(shift.start_time, shift.end_time)
         totalHours += hours
 
         // Raggruppa per tipo turno

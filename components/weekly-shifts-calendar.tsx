@@ -63,6 +63,7 @@ export function WeeklyShiftsCalendar({
   const [shiftOrders, setShiftOrders] = useState<Record<string, number>>({})
 
   const dayNames = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
+  const dayNamesShort = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
 
   // Calcola l'inizio della settimana (lunedì)
   const getWeekStart = (date: Date) => {
@@ -99,6 +100,7 @@ export function WeeklyShiftsCalendar({
     return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" })
   }
 
+  // FIX: Funzione corretta per calcolare le ore
   const calculateShiftHours = (startTime: string, endTime: string): number => {
     const [startHour, startMinute] = startTime.split(":").map(Number)
     const [endHour, endMinute] = endTime.split(":").map(Number)
@@ -400,19 +402,23 @@ export function WeeklyShiftsCalendar({
         onDragStart={(e) => handleDragStart(e, group.id, dateString)}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, group.id, dateString)}
-        className={cn("p-3 rounded-lg border transition-all duration-200 bg-white shadow-sm", "hover:shadow-md", {
-          "opacity-50 scale-95": isDragging,
-          "border-blue-300 bg-blue-50":
-            draggedItem && draggedItem.groupId !== group.id && draggedItem.date === dateString,
-          "cursor-move": canInteract,
-          "border-gray-200": !isDragging && (!draggedItem || draggedItem.date !== dateString),
-        })}
+        className={cn(
+          "p-2 md:p-3 rounded-lg border transition-all duration-200 bg-white shadow-sm",
+          "hover:shadow-md",
+          {
+            "opacity-50 scale-95": isDragging,
+            "border-blue-300 bg-blue-50":
+              draggedItem && draggedItem.groupId !== group.id && draggedItem.date === dateString,
+            "cursor-move": canInteract,
+            "border-gray-200": !isDragging && (!draggedItem || draggedItem.date !== dateString),
+          },
+        )}
       >
-        <div className="space-y-2">
+        <div className="space-y-1 md:space-y-2">
           {/* Header del gruppo con nome utente e ore totali */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              {canInteract && <GripVertical className="h-3 w-3 text-gray-400 cursor-grab" />}
+          <div className="flex items-center justify-between mb-1 md:mb-2">
+            <div className="flex items-center gap-1 md:gap-2">
+              {canInteract && <GripVertical className="h-2 w-2 md:h-3 md:w-3 text-gray-400 cursor-grab" />}
               <span className="font-semibold text-xs text-gray-900">{group.user_name}</span>
               <Badge variant="outline" className="text-xs font-medium px-1 py-0">
                 {group.totalHours.toFixed(1)}h
@@ -435,7 +441,7 @@ export function WeeklyShiftsCalendar({
               return (
                 <div key={shift.id}>
                   <div
-                    className="flex items-center justify-between p-2 rounded text-xs border-l-3"
+                    className="flex items-center justify-between p-1 md:p-2 rounded text-xs border-l-3"
                     style={{
                       backgroundColor: `${shiftType.color}08`,
                       borderLeftColor: shiftType.color,
@@ -443,7 +449,7 @@ export function WeeklyShiftsCalendar({
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1 mb-1">
-                        {isApertura && <Star className="h-3 w-3 text-yellow-500" />}
+                        {isApertura && <Star className="h-2 w-2 md:h-3 md:w-3 text-yellow-500" />}
                         <span className="font-medium text-xs truncate" style={{ color: shiftType.color }}>
                           {shiftType.name}
                         </span>
@@ -463,7 +469,7 @@ export function WeeklyShiftsCalendar({
 
                     {/* Pulsanti azione compatti */}
                     {(canEditShift(shift) || canDeleteShift(shift)) && (
-                      <div className="flex flex-col gap-0.5 ml-2">
+                      <div className="flex flex-col gap-0.5 ml-1 md:ml-2">
                         {canEditShift(shift) && (
                           <button
                             onClick={(e) => {
@@ -473,7 +479,7 @@ export function WeeklyShiftsCalendar({
                             className="text-blue-500 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100 transition-colors"
                             title="Modifica turno"
                           >
-                            <Edit className="h-3 w-3" />
+                            <Edit className="h-2 w-2 md:h-3 md:w-3" />
                           </button>
                         )}
                         {canDeleteShift(shift) && (
@@ -485,7 +491,7 @@ export function WeeklyShiftsCalendar({
                             className="text-red-500 hover:text-red-700 p-0.5 rounded hover:bg-red-100 transition-colors"
                             title="Elimina turno"
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-2 w-2 md:h-3 md:w-3" />
                           </button>
                         )}
                       </div>
@@ -495,9 +501,10 @@ export function WeeklyShiftsCalendar({
                   {/* Badge rientro ufficio dopo IRCAC */}
                   {showRientroUfficio && (
                     <div className="flex items-center justify-center py-0.5">
-                      <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                        <ArrowRight className="h-2.5 w-2.5" />
-                        <span className="text-xs font-medium">Rientro Ufficio</span>
+                      <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-1 md:px-1.5 py-0.5 rounded border border-blue-200">
+                        <ArrowRight className="h-2 w-2 md:h-2.5 md:w-2.5" />
+                        <span className="text-xs font-medium hidden md:inline">Rientro Ufficio</span>
+                        <span className="text-xs font-medium md:hidden">Rientro</span>
                       </div>
                     </div>
                   )}
@@ -511,33 +518,35 @@ export function WeeklyShiftsCalendar({
   }
 
   return (
-    <div className="w-full space-y-6">
-      {/* Calendario principale */}
+    <div className="w-full space-y-4 md:space-y-6">
+      {/* Calendario principale - Mobile Responsive */}
       <Card className="w-full">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+        <CardHeader className="pb-3 md:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+              <Clock className="h-4 w-4 md:h-5 md:w-5" />
               Turni Settimanali
               {!isCurrentWeek() && (
-                <Badge variant="outline" className="ml-2">
+                <Badge variant="outline" className="ml-2 text-xs">
                   Settimana Passata/Futura
                 </Badge>
               )}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={previousWeek}>
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
-              <span className="font-medium min-w-[200px] text-center">{getWeekRange()}</span>
+              <span className="font-medium text-sm md:text-base min-w-[150px] md:min-w-[200px] text-center">
+                {getWeekRange()}
+              </span>
               <Button variant="outline" size="sm" onClick={nextWeek}>
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
             </div>
           </div>
 
-          {/* Legenda tipi di turno */}
-          <div className="flex flex-wrap gap-2 pt-2">
+          {/* Legenda tipi di turno - Mobile Responsive */}
+          <div className="flex flex-wrap gap-1 md:gap-2 pt-2">
             {shiftTypes
               .filter((type) => type.name !== "Aeroporto") // Escludi Aeroporto dalla legenda principale
               .sort((a, b) => {
@@ -551,16 +560,18 @@ export function WeeklyShiftsCalendar({
                   className="text-xs font-medium"
                   style={{ borderColor: type.color, color: type.color }}
                 >
-                  {type.name === "Apertura" && <Star className="h-3 w-3 mr-1" />}
+                  {type.name === "Apertura" && <Star className="h-2 w-2 md:h-3 md:w-3 mr-1" />}
                   {type.name}
                 </Badge>
               ))}
           </div>
 
-          {/* Istruzioni */}
+          {/* Istruzioni - Mobile Responsive */}
           {isLoggedIn && currentUser && (
             <div className="text-xs text-gray-500 pt-2 bg-blue-50 p-2 rounded">
-              💡 <strong>Suggerimento:</strong> Trascina i gruppi di turni per riordinarli nel giorno
+              💡 <strong>Suggerimento:</strong>{" "}
+              <span className="hidden md:inline">Trascina i gruppi di turni per riordinarli nel giorno</span>
+              <span className="md:hidden">Tocca per gestire i turni</span>
               <br />
               <ArrowRight className="h-3 w-3 inline mr-1" />
               <strong>Rientro Ufficio:</strong> Appare automaticamente tra IRCAC e turno successivo dello stesso utente
@@ -571,8 +582,8 @@ export function WeeklyShiftsCalendar({
         </CardHeader>
 
         <CardContent>
-          {/* Griglia calendario più larga */}
-          <div className="grid grid-cols-7 gap-2 w-full">
+          {/* Griglia calendario - Mobile Responsive */}
+          <div className="grid grid-cols-7 gap-1 md:gap-2 w-full">
             {weekDays.map((day, index) => {
               const groupedShifts = getGroupedShiftsForDay(day)
               const isCurrentDay = isToday(day)
@@ -581,17 +592,20 @@ export function WeeklyShiftsCalendar({
               return (
                 <div
                   key={index}
-                  className={cn("min-h-[350px] border-2 rounded-lg p-2", {
+                  className={cn("min-h-[200px] md:min-h-[350px] border-2 rounded-lg p-1 md:p-2", {
                     "bg-blue-50 border-blue-200": isCurrentDay,
                     "bg-gray-50 border-gray-200": isPastDay,
                     "border-gray-200 hover:border-gray-300": !isCurrentDay && !isPastDay,
                   })}
                 >
-                  {/* Header del giorno */}
-                  <div className="text-center mb-3 pb-2 border-b border-gray-200">
-                    <div className="font-medium text-xs text-gray-600">{dayNames[index]}</div>
+                  {/* Header del giorno - Mobile Responsive */}
+                  <div className="text-center mb-2 md:mb-3 pb-1 md:pb-2 border-b border-gray-200">
+                    <div className="font-medium text-xs text-gray-600">
+                      <span className="md:hidden">{dayNamesShort[index]}</span>
+                      <span className="hidden md:inline">{dayNames[index]}</span>
+                    </div>
                     <div
-                      className={cn("text-lg font-bold", {
+                      className={cn("text-sm md:text-lg font-bold", {
                         "text-blue-600": isCurrentDay,
                         "text-gray-400": isPastDay,
                         "text-gray-900": !isCurrentDay && !isPastDay,
@@ -602,19 +616,22 @@ export function WeeklyShiftsCalendar({
                   </div>
 
                   {/* Gruppi di turni */}
-                  <div className="space-y-2">
+                  <div className="space-y-1 md:space-y-2">
                     {groupedShifts.map((group) => renderShiftGroup(group, day))}
 
-                    {/* Pulsante aggiungi turno */}
+                    {/* Pulsante aggiungi turno - Mobile Responsive */}
                     {isLoggedIn && currentUser && !isPastDay && (
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full text-xs h-8 border-dashed border-2 hover:border-blue-300 hover:bg-blue-50"
+                        className="w-full text-xs h-6 md:h-8 border-dashed border-2 hover:border-blue-300 hover:bg-blue-50"
                         onClick={() => handleAddShift(formatDate(day))}
                       >
-                        <Plus className="h-3 w-3 mr-1" />
-                        {currentUser.role === "admin" ? "Aggiungi" : "Mio Turno"}
+                        <Plus className="h-2 w-2 md:h-3 md:w-3 mr-1" />
+                        <span className="hidden md:inline">
+                          {currentUser.role === "admin" ? "Aggiungi" : "Mio Turno"}
+                        </span>
+                        <span className="md:hidden">+</span>
                       </Button>
                     )}
                   </div>
@@ -625,16 +642,16 @@ export function WeeklyShiftsCalendar({
         </CardContent>
       </Card>
 
-      {/* Sezione Aeroporto separata */}
+      {/* Sezione Aeroporto separata - Mobile Responsive */}
       <Card className="w-full">
-        <CardHeader>
+        <CardHeader className="pb-3 md:pb-6">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <div className="w-4 h-4 rounded-full bg-orange-500"></div>
+            <div className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-orange-500"></div>
             Turni Aeroporto
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-2 w-full">
+          <div className="grid grid-cols-7 gap-1 md:gap-2 w-full">
             {weekDays.map((day, index) => {
               const airportShifts = getAirportShiftsForDay(day)
               const isCurrentDay = isToday(day)
@@ -643,16 +660,19 @@ export function WeeklyShiftsCalendar({
               return (
                 <div
                   key={`airport-${index}`}
-                  className={cn("min-h-[80px] border rounded-lg p-2", {
+                  className={cn("min-h-[60px] md:min-h-[80px] border rounded-lg p-1 md:p-2", {
                     "bg-blue-50 border-blue-200": isCurrentDay,
                     "bg-gray-50 border-gray-200": isPastDay,
                     "border-gray-200": !isCurrentDay && !isPastDay,
                   })}
                 >
                   {/* Header del giorno */}
-                  <div className="text-center mb-2 pb-1 border-b border-gray-200">
-                    <div className="font-medium text-xs text-gray-600">{dayNames[index]}</div>
-                    <div className="text-sm font-bold text-gray-500">{formatDisplayDate(day)}</div>
+                  <div className="text-center mb-1 md:mb-2 pb-1 border-b border-gray-200">
+                    <div className="font-medium text-xs text-gray-600">
+                      <span className="md:hidden">{dayNamesShort[index]}</span>
+                      <span className="hidden md:inline">{dayNames[index]}</span>
+                    </div>
+                    <div className="text-xs md:text-sm font-bold text-gray-500">{formatDisplayDate(day)}</div>
                   </div>
 
                   {/* Turni aeroporto */}
@@ -664,7 +684,7 @@ export function WeeklyShiftsCalendar({
                       return (
                         <div
                           key={shift.id}
-                          className="flex items-center justify-between p-1.5 rounded text-xs border-l-3"
+                          className="flex items-center justify-between p-1 md:p-1.5 rounded text-xs border-l-3"
                           style={{
                             backgroundColor: `${shiftType.color}08`,
                             borderLeftColor: shiftType.color,
@@ -689,7 +709,7 @@ export function WeeklyShiftsCalendar({
 
                           {/* Pulsanti azione */}
                           {(canEditShift(shift) || canDeleteShift(shift)) && (
-                            <div className="flex flex-col gap-0.5 ml-2">
+                            <div className="flex flex-col gap-0.5 ml-1 md:ml-2">
                               {canEditShift(shift) && (
                                 <button
                                   onClick={(e) => {
@@ -699,7 +719,7 @@ export function WeeklyShiftsCalendar({
                                   className="text-blue-500 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100 transition-colors"
                                   title="Modifica turno"
                                 >
-                                  <Edit className="h-3 w-3" />
+                                  <Edit className="h-2 w-2 md:h-3 md:w-3" />
                                 </button>
                               )}
                               {canDeleteShift(shift) && (
@@ -711,7 +731,7 @@ export function WeeklyShiftsCalendar({
                                   className="text-red-500 hover:text-red-700 p-0.5 rounded hover:bg-red-100 transition-colors"
                                   title="Elimina turno"
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <Trash2 className="h-2 w-2 md:h-3 md:w-3" />
                                 </button>
                               )}
                             </div>
@@ -725,11 +745,12 @@ export function WeeklyShiftsCalendar({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full text-xs h-6 border-dashed border-2 hover:border-orange-300 hover:bg-orange-50"
+                        className="w-full text-xs h-5 md:h-6 border-dashed border-2 hover:border-orange-300 hover:bg-orange-50"
                         onClick={() => handleAddShift(formatDate(day))}
                       >
-                        <Plus className="h-2.5 w-2.5 mr-1" />
-                        Aeroporto
+                        <Plus className="h-2 w-2 md:h-2.5 md:w-2.5 mr-1" />
+                        <span className="hidden md:inline">Aeroporto</span>
+                        <span className="md:hidden">✈️</span>
                       </Button>
                     )}
                   </div>

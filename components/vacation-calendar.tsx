@@ -248,7 +248,7 @@ export function VacationCalendar({
 
     // Giorni vuoti all'inizio
     for (let i = 0; i < adjustedFirstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-20"></div>)
+      days.push(<div key={`empty-${i}`} className="h-16 md:h-20"></div>)
     }
 
     // Giorni del mese
@@ -262,7 +262,7 @@ export function VacationCalendar({
       days.push(
         <div
           key={day}
-          className={cn("h-20 border border-gray-200 p-1 relative cursor-pointer transition-colors", {
+          className={cn("h-16 md:h-20 border border-gray-200 p-1 relative cursor-pointer transition-colors", {
             "bg-blue-100 border-blue-300": isSelected,
             "bg-gray-100 cursor-not-allowed": isPast,
             "bg-red-50 cursor-not-allowed": hasOtherVacations && !hasMyVacations,
@@ -272,7 +272,7 @@ export function VacationCalendar({
           onClick={() => handleDateClick(day)}
         >
           <div
-            className={cn("font-medium text-sm", {
+            className={cn("font-medium text-xs md:text-sm", {
               "text-gray-400": isPast,
               "text-blue-600": isSelected,
             })}
@@ -329,7 +329,7 @@ export function VacationCalendar({
 
           {isSelected && (
             <div className="absolute top-1 right-1">
-              <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+              <div className="w-2 h-2 md:w-3 md:h-3 bg-blue-600 rounded-full"></div>
             </div>
           )}
         </div>,
@@ -342,59 +342,64 @@ export function VacationCalendar({
   return (
     <>
       <Card className="w-full">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+        <CardHeader className="pb-3 md:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+              <Calendar className="h-4 w-4 md:h-5 md:w-5" />
               Calendario Ferie
               {isSelecting && (
-                <Badge variant="outline" className="ml-2">
+                <Badge variant="outline" className="ml-2 text-xs">
                   Modalità Selezione
                 </Badge>
               )}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={previousMonth}>
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
-              <span className="font-medium min-w-[150px] text-center">
+              <span className="font-medium text-sm md:text-base min-w-[120px] md:min-w-[150px] text-center">
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </span>
               <Button variant="outline" size="sm" onClick={nextMonth}>
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
               </Button>
             </div>
           </div>
 
-          {/* Controlli di selezione */}
+          {/* Controlli di selezione - Mobile Responsive */}
           {isLoggedIn && currentUser && (
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-2">
               {!isSelecting ? (
-                <Button onClick={startSelection} size="sm" variant="outline">
-                  <Calendar className="h-4 w-4 mr-2" />
+                <Button onClick={startSelection} size="sm" variant="outline" className="w-full sm:w-auto">
+                  <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                   Seleziona Ferie dal Calendario
                 </Button>
               ) : (
                 <div className="flex flex-col gap-2 w-full">
-                  <div className="flex items-center gap-2">
-                    <Button onClick={confirmSelection} size="sm" disabled={selectedDates.length === 0}>
-                      <Check className="h-4 w-4 mr-2" />
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <Button
+                      onClick={confirmSelection}
+                      size="sm"
+                      disabled={selectedDates.length === 0}
+                      className="flex-1"
+                    >
+                      <Check className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                       Conferma ({selectedDates.length} giorni)
                     </Button>
-                    <Button onClick={cancelSelection} size="sm" variant="outline">
-                      <X className="h-4 w-4 mr-2" />
+                    <Button onClick={cancelSelection} size="sm" variant="outline" className="flex-1">
+                      <X className="h-3 w-3 md:h-4 md:w-4 mr-2" />
                       Annulla
                     </Button>
                   </div>
 
                   {/* Mostra i range selezionati */}
                   {selectedDates.length > 0 && (
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded">
                       <strong>Periodi selezionati:</strong>
                       {getConsecutiveRanges(selectedDates).map((range, index) => (
-                        <span key={index} className="ml-2">
+                        <span key={index} className="block sm:inline sm:ml-2">
                           {new Date(range.start).toLocaleDateString("it-IT")}
-                          {range.start !== range.end && ` - ${new Date(range.end).toLocaleDateString("it-IT")}`}(
+                          {range.start !== range.end && ` - ${new Date(range.end).toLocaleDateString("it-IT")}`} (
                           {range.count} {range.count === 1 ? "giorno" : "giorni"})
                           {index < getConsecutiveRanges(selectedDates).length - 1 && ","}
                         </span>
@@ -406,18 +411,18 @@ export function VacationCalendar({
             </div>
           )}
 
-          {/* Legenda */}
-          <div className="flex flex-wrap items-center gap-4 pt-2 text-xs text-gray-600">
+          {/* Legenda - Mobile Responsive */}
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 pt-2 text-xs text-gray-600">
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
+              <div className="w-2 h-2 md:w-3 md:h-3 bg-blue-100 border border-blue-300 rounded"></div>
               <span>Giorni selezionati</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-gray-100 rounded"></div>
+              <div className="w-2 h-2 md:w-3 md:h-3 bg-gray-100 rounded"></div>
               <span>Giorni passati</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-50 border border-red-200 rounded"></div>
+              <div className="w-2 h-2 md:w-3 md:h-3 bg-red-50 border border-red-200 rounded"></div>
               <span>Giorni occupati</span>
             </div>
             {currentUser && (
@@ -439,11 +444,11 @@ export function VacationCalendar({
         </CardHeader>
 
         <CardContent>
-          <div className="grid grid-cols-7 gap-0 mb-4">
+          <div className="grid grid-cols-7 gap-0 mb-2 md:mb-4">
             {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((day) => (
               <div
                 key={day}
-                className="h-10 flex items-center justify-center font-medium bg-gray-50 border border-gray-200"
+                className="h-8 md:h-10 flex items-center justify-center font-medium bg-gray-50 border border-gray-200 text-xs md:text-sm"
               >
                 {day}
               </div>
