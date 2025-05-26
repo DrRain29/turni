@@ -1,21 +1,34 @@
 import { NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
 
-// Funzione per ottenere l'inizio della settimana (lunedì)
+// Funzione per ottenere l'inizio della settimana (lunedì) - corretta
 function getWeekStart(date: Date): string {
-  const d = new Date(date)
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate()) // Evita problemi di fuso orario
   const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  const weekStart = new Date(d.setDate(diff))
-  return weekStart.toISOString().split("T")[0]
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Lunedì come primo giorno
+  d.setDate(diff)
+
+  // Formatta la data come YYYY-MM-DD senza problemi di fuso orario
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const dayOfMonth = String(d.getDate()).padStart(2, "0")
+
+  return `${year}-${month}-${dayOfMonth}`
 }
 
-// Funzione per ottenere la fine della settimana (domenica)
+// Funzione per ottenere la fine della settimana (domenica) - corretta
 function getWeekEnd(date: Date): string {
-  const weekStart = new Date(getWeekStart(date))
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 6)
-  return weekEnd.toISOString().split("T")[0]
+  const weekStartDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const day = weekStartDate.getDay()
+  const diff = weekStartDate.getDate() - day + (day === 0 ? -6 : 1) // Lunedì
+  weekStartDate.setDate(diff + 6) // Domenica (lunedì + 6 giorni)
+
+  // Formatta la data come YYYY-MM-DD senza problemi di fuso orario
+  const year = weekStartDate.getFullYear()
+  const month = String(weekStartDate.getMonth() + 1).padStart(2, "0")
+  const dayOfMonth = String(weekStartDate.getDate()).padStart(2, "0")
+
+  return `${year}-${month}-${dayOfMonth}`
 }
 
 export async function GET() {
@@ -26,6 +39,8 @@ export async function GET() {
     const today = new Date()
     const weekStart = getWeekStart(today)
     const weekEnd = getWeekEnd(today)
+
+    console.log(`Fetching shifts from ${weekStart} to ${weekEnd}`) // Debug log
 
     // Ottieni tutti i turni della settimana corrente con informazioni utente e tipo turno
     const { data: shifts, error: shiftsError } = await supabase
@@ -55,6 +70,8 @@ export async function GET() {
       console.error("Error fetching shifts:", shiftsError)
       return NextResponse.json({ error: "Errore nel caricamento dei turni" }, { status: 500 })
     }
+
+    console.log(`Found ${shifts?.length || 0} shifts for the week`) // Debug log
 
     // Ottieni tutti gli utenti
     const { data: users, error: usersError } = await supabase
@@ -102,7 +119,8 @@ export async function GET() {
         shiftsByType[shiftTypeName].hours += hours
 
         // Raggruppa per giorno
-        const dayName = new Date(shift.date).toLocaleDateString("it-IT", { weekday: "long" })
+        const shiftDate = new Date(shift.date + "T00:00:00") // Evita problemi di fuso orario
+        const dayName = shiftDate.toLocaleDateString("it-IT", { weekday: "long" })
         if (!shiftsByDay[dayName]) {
           shiftsByDay[dayName] = { count: 0, hours: 0 }
         }
@@ -131,8 +149,8 @@ export async function GET() {
     const activeUsers = userStats.filter((user) => user.totalHours > 0).length
 
     // Formatta le date per il frontend
-    const weekStartFormatted = new Date(weekStart).toLocaleDateString("it-IT")
-    const weekEndFormatted = new Date(weekEnd).toLocaleDateString("it-IT")
+    const weekStartFormatted = new Date(weekStart + "T00:00:00").toLocaleDateString("it-IT")
+    const weekEndFormatted = new Date(weekEnd + "T00:00:00").toLocaleDateString("it-IT")
 
     return NextResponse.json({
       userStats,
