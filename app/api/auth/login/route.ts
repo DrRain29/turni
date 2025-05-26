@@ -21,11 +21,12 @@ export async function POST(request: NextRequest) {
     // Verifica la password
     let isValidPassword = false
 
-    if (user.custom_password) {
+    // Prima controlla se ha una password personalizzata E se non è null/vuota
+    if (user.custom_password && user.custom_password.trim() !== "") {
       // Se l'utente ha una password personalizzata, usa quella
       isValidPassword = password === user.custom_password
     } else {
-      // Altrimenti usa le password predefinite
+      // Altrimenti usa le password predefinite originali
       switch (email) {
         case "vpedone@entermed.it":
           isValidPassword = password === "@Vincenzo29"
