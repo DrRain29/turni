@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { BarChart3, Users, Clock, TrendingUp, Star } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { BarChart3, Users, Clock, TrendingUp, Star, Calendar, RefreshCw } from "lucide-react"
 
 interface UserStats {
   user_id: string
@@ -12,6 +13,15 @@ interface UserStats {
   totalHours: number
   totalShifts: number
   shiftsByType: Record<string, { count: number; hours: number; color: string }>
+  shiftsByDay: Record<string, { count: number; hours: number }>
+}
+
+interface WeekInfo {
+  start: string
+  end: string
+  startFormatted: string
+  endFormatted: string
+  isCurrentWeek: boolean
 }
 
 interface StatsSummary {
@@ -24,6 +34,7 @@ interface StatsSummary {
 
 interface StatisticsData {
   userStats: UserStats[]
+  weekInfo: WeekInfo
   summary: StatsSummary
 }
 
@@ -31,17 +42,26 @@ export function StatisticsPanel() {
   const [data, setData] = useState<StatisticsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   useEffect(() => {
     fetchStatistics()
+
+    // Aggiorna automaticamente ogni 5 minuti
+    const interval = setInterval(fetchStatistics, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
   }, [])
 
   const fetchStatistics = async () => {
     try {
+      setIsLoading(true)
       const response = await fetch("/api/statistics")
       if (response.ok) {
         const statsData = await response.json()
         setData(statsData)
+        setLastUpdated(new Date())
+        setError("")
       } else {
         setError("Errore nel caricamento delle statistiche")
       }
@@ -52,7 +72,11 @@ export function StatisticsPanel() {
     }
   }
 
-  if (isLoading) {
+  const handleRefresh = () => {
+    fetchStatistics()
+  }
+
+  if (isLoading && !data) {
     return (
       <Card className="w-full">
         <CardContent className="flex items-center justify-center py-8">
@@ -69,22 +93,56 @@ export function StatisticsPanel() {
     return (
       <Card className="w-full">
         <CardContent className="flex items-center justify-center py-8">
-          <div className="text-center text-red-600">
-            <p>{error || "Errore nel caricamento"}</p>
+          <div className="text-center">
+            <div className="text-red-600 mb-4">
+              <p>{error || "Errore nel caricamento"}</p>
+            </div>
+            <Button onClick={handleRefresh} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Riprova
+            </Button>
           </div>
         </CardContent>
       </Card>
     )
   }
 
+  const dayNames = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
+
   return (
     <div className="space-y-6">
+      {/* Header con info settimana */}
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Settimana Corrente
+              </CardTitle>
+              <p className="text-sm text-gray-600 mt-1">
+                Dal {data.weekInfo.startFormatted} al {data.weekInfo.endFormatted}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {lastUpdated && (
+                <span className="text-xs text-gray-500">Aggiornato: {lastUpdated.toLocaleTimeString("it-IT")}</span>
+              )}
+              <Button onClick={handleRefresh} variant="outline" size="sm" disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+                Aggiorna
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
       {/* Riepilogo generale */}
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            Statistiche Generali
+            Riepilogo Settimana
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -123,7 +181,7 @@ export function StatisticsPanel() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Ore per Dipendente
+            Ore per Dipendente - Settimana Corrente
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -158,7 +216,7 @@ export function StatisticsPanel() {
                 </div>
 
                 {/* Barra di progresso visuale */}
-                {user.totalHours > 0 && (
+                {user.totalHours > 0 && data.summary.totalHours > 0 && (
                   <div className="mb-3">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
@@ -169,30 +227,63 @@ export function StatisticsPanel() {
                       ></div>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {((user.totalHours / data.summary.totalHours) * 100).toFixed(1)}% del totale
+                      {((user.totalHours / data.summary.totalHours) * 100).toFixed(1)}% del totale settimanale
                     </div>
                   </div>
                 )}
 
                 {/* Dettaglio turni per tipo */}
                 {Object.keys(user.shiftsByType).length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {Object.entries(user.shiftsByType).map(([typeName, typeData]) => (
-                      <div key={typeName} className="text-center p-2 bg-white rounded border text-xs">
-                        <div className="font-medium" style={{ color: typeData.color }}>
-                          {typeName}
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {Object.entries(user.shiftsByType).map(([typeName, typeData]) => (
+                        <div key={typeName} className="text-center p-2 bg-white rounded border text-xs">
+                          <div className="font-medium" style={{ color: typeData.color }}>
+                            {typeName}
+                          </div>
+                          <div className="text-gray-600">
+                            {typeData.count} • {typeData.hours.toFixed(1)}h
+                          </div>
                         </div>
-                        <div className="text-gray-600">
-                          {typeData.count} • {typeData.hours.toFixed(1)}h
+                      ))}
+                    </div>
+
+                    {/* Distribuzione per giorno */}
+                    {Object.keys(user.shiftsByDay).length > 0 && (
+                      <div>
+                        <div className="text-sm font-medium text-gray-700 mb-2">Distribuzione settimanale:</div>
+                        <div className="grid grid-cols-7 gap-1">
+                          {dayNames.map((day) => {
+                            const dayData = user.shiftsByDay[day]
+                            return (
+                              <div key={day} className="text-center p-1 bg-gray-50 rounded text-xs">
+                                <div className="font-medium text-gray-600 capitalize">{day.slice(0, 3)}</div>
+                                <div className="text-gray-800">{dayData ? `${dayData.hours.toFixed(1)}h` : "-"}</div>
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 ) : (
-                  <div className="text-center text-gray-500 italic text-sm">Nessun turno assegnato</div>
+                  <div className="text-center text-gray-500 italic text-sm">Nessun turno questa settimana</div>
                 )}
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Nota informativa */}
+      <Card className="w-full">
+        <CardContent className="p-4">
+          <div className="text-sm text-gray-600 text-center">
+            <p>
+              📊 <strong>Nota:</strong> Le statistiche si aggiornano automaticamente ogni 5 minuti e mostrano solo i
+              dati della settimana corrente.
+            </p>
+            <p className="mt-1">🔄 I dati si resettano automaticamente all'inizio di ogni nuova settimana (lunedì).</p>
           </div>
         </CardContent>
       </Card>

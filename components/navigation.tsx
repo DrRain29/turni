@@ -3,12 +3,14 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
-import { Calendar, Clock, LogOut, Users, Menu, X, Lock, BarChart3 } from "lucide-react"
+import { Calendar, Clock, LogOut, Menu, X, Lock, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ChangePasswordDialog } from "./change-password-dialog"
+import Image from "next/image"
 
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -38,15 +40,15 @@ export function Navigation() {
   ]
 
   return (
-    <>
+    <TooltipProvider>
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo e titolo */}
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Users className="h-6 w-6 text-blue-600" />
-                <h1 className="text-xl font-semibold text-gray-900">Entermed Portal</h1>
+              <div className="flex items-center gap-3">
+                <Image src="/images/entermed-logo.png" alt="Entermed" width={120} height={40} className="h-8 w-auto" />
+                <span className="text-xl font-semibold text-gray-900">Portal</span>
               </div>
 
               {/* Navigation Desktop */}
@@ -85,15 +87,24 @@ export function Navigation() {
                     )}
                   </span>
                   <div className="hidden sm:flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowChangePasswordDialog(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <Lock className="h-4 w-4" />
-                      Cambia Password
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="flex items-center gap-2 opacity-50 cursor-not-allowed"
+                          >
+                            <Lock className="h-4 w-4" />
+                            Cambia Password
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Attualmente disabilitato</p>
+                      </TooltipContent>
+                    </Tooltip>
                     <Button variant="outline" size="sm" onClick={logout}>
                       <LogOut className="h-4 w-4 mr-2" />
                       Esci
@@ -154,18 +165,24 @@ export function Navigation() {
                       </Badge>
                     )}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowChangePasswordDialog(true)
-                      setIsMobileMenuOpen(false)
-                    }}
-                    className="w-full justify-start gap-2"
-                  >
-                    <Lock className="h-4 w-4" />
-                    Cambia Password
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="block">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          className="w-full justify-start gap-2 opacity-50 cursor-not-allowed"
+                        >
+                          <Lock className="h-4 w-4" />
+                          Cambia Password
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Attualmente disabilitato</p>
+                    </TooltipContent>
+                  </Tooltip>
                   <Button variant="outline" size="sm" onClick={logout} className="w-full justify-start gap-2">
                     <LogOut className="h-4 w-4" />
                     Esci
@@ -177,7 +194,7 @@ export function Navigation() {
         </div>
       </header>
 
-      {/* Dialog per cambiare password */}
+      {/* Dialog per cambiare password (mantenuto per compatibilità futura) */}
       {user && (
         <ChangePasswordDialog
           isOpen={showChangePasswordDialog}
@@ -186,6 +203,6 @@ export function Navigation() {
           userName={user.name}
         />
       )}
-    </>
+    </TooltipProvider>
   )
 }
