@@ -129,10 +129,22 @@ export function WeeklyShiftsCalendar({
     return (endMinutes - startMinutes) / 60
   }
 
-  // Raggruppa i turni per utente e giorno
+  // Funzione per ottenere i turni aeroporto per giorno
+  const getAirportShiftsForDay = (date: Date): Shift[] => {
+    const dateString = formatDate(date)
+    return shifts.filter((shift) => {
+      const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+      return shift.date === dateString && shiftType?.name === "Aeroporto"
+    })
+  }
+
+  // Raggruppa i turni per utente e giorno, escludendo Aeroporto
   const getGroupedShiftsForDay = (date: Date): GroupedShift[] => {
     const dateString = formatDate(date)
-    const dayShifts = shifts.filter((shift) => shift.date === dateString)
+    const dayShifts = shifts.filter((shift) => {
+      const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+      return shift.date === dateString && shiftType?.name !== "Aeroporto"
+    })
 
     // Raggruppa per utente
     const userGroups = dayShifts.reduce(
@@ -165,7 +177,7 @@ export function WeeklyShiftsCalendar({
 
       const hasSecondShift = group.shifts.length > 1
 
-      // Ordina i turni dell'utente: Apertura SEMPRE per primo, poi IRCAC, poi altri, Chiusura per ultimo
+      // Ordina i turni dell'utente: Apertura sempre per primo, poi 2° Turno, poi IRCAC, infine Chiusura
       const sortedShifts = group.shifts.sort((a, b) => {
         const aType = shiftTypes.find((st) => st.id === a.shift_type_id)
         const bType = shiftTypes.find((st) => st.id === b.shift_type_id)
@@ -175,14 +187,14 @@ export function WeeklyShiftsCalendar({
           switch (shiftType.name) {
             case "Apertura":
               return 0 // Apertura sempre per primo
-            case "IRCAC":
-              return 1
-            case "Aeroporto":
-              return 2
             case "2° Turno":
-              return 3
+              return 1 // 2° Turno secondo
+            case "IRCAC":
+              return 2 // IRCAC terzo
             case "Chiusura":
-              return 4
+              return 3 // Chiusura sempre ultimo
+            case "Aeroporto":
+              return 4 // Aeroporto non viene mostrato qui
             default:
               return 5
           }
@@ -436,12 +448,12 @@ export function WeeklyShiftsCalendar({
             </div>
           </div>
 
-          {/* Indicatore rientro ufficio tra primo e secondo turno */}
+          {/* Indicatore rientro ufficio tra IRCAC e turno successivo */}
           {group.hasIRCAC && group.hasSecondShift && group.shifts.length > 1 && (
-            <div className="flex items-center justify-center py-1">
-              <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full border border-blue-200">
-                <ArrowRight className="h-3 w-3" />
-                <span className="font-medium">Rientro Ufficio 14:00</span>
+            <div className="flex items-center justify-center py-0.5">
+              <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                <ArrowRight className="h-2.5 w-2.5" />
+                <span className="text-xs font-medium">Rientro Ufficio</span>
               </div>
             </div>
           )}
@@ -552,8 +564,9 @@ export function WeeklyShiftsCalendar({
           {/* Legenda tipi di turno */}
           <div className="flex flex-wrap gap-2 pt-2">
             {shiftTypes
+              .filter((type) => type.name !== "Aeroporto") // Escludi Aeroporto dalla legenda principale
               .sort((a, b) => {
-                const order = ["Apertura", "2° Turno", "Aeroporto", "IRCAC", "Chiusura"]
+                const order = ["Apertura", "2° Turno", "IRCAC", "Chiusura"]
                 return order.indexOf(a.name) - order.indexOf(b.name)
               })
               .map((type) => (
@@ -575,7 +588,9 @@ export function WeeklyShiftsCalendar({
               💡 <strong>Suggerimento:</strong> Trascina i gruppi di turni per riordinarli nel giorno
               <br />
               <ArrowRight className="h-3 w-3 inline mr-1" />
-              <strong>Rientro Ufficio:</strong> Appare automaticamente quando un dipendente ha IRCAC + secondo turno
+              <strong>Rientro Ufficio:</strong> Appare automaticamente tra IRCAC e turno successivo
+              <br />
+              ✈️ <strong>Aeroporto:</strong> I turni aeroporto sono mostrati nella sezione separata sotto
             </div>
           )}
         </CardHeader>
@@ -625,6 +640,121 @@ export function WeeklyShiftsCalendar({
                       >
                         <Plus className="h-3 w-3 mr-1" />
                         {currentUser.role === "admin" ? "Aggiungi" : "Mio Turno"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sezione Aeroporto separata */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <div className="w-4 h-4 rounded-full bg-purple-500"></div>
+            Turni Aeroporto
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-7 gap-2 w-full">
+            {weekDays.map((day, index) => {
+              const airportShifts = getAirportShiftsForDay(day)
+              const isCurrentDay = isToday(day)
+              const isPastDay = isPast(day)
+
+              return (
+                <div
+                  key={`airport-${index}`}
+                  className={cn("min-h-[80px] border rounded-lg p-2", {
+                    "bg-blue-50 border-blue-200": isCurrentDay,
+                    "bg-gray-50 border-gray-200": isPastDay,
+                    "border-gray-200": !isCurrentDay && !isPastDay,
+                  })}
+                >
+                  {/* Header del giorno */}
+                  <div className="text-center mb-2 pb-1 border-b border-gray-200">
+                    <div className="font-medium text-xs text-gray-600">{dayNames[index]}</div>
+                    <div className="text-sm font-bold text-gray-500">{formatDisplayDate(day)}</div>
+                  </div>
+
+                  {/* Turni aeroporto */}
+                  <div className="space-y-1">
+                    {airportShifts.map((shift) => {
+                      const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+                      if (!shiftType) return null
+
+                      return (
+                        <div
+                          key={shift.id}
+                          className="flex items-center justify-between p-1.5 rounded text-xs border-l-3"
+                          style={{
+                            backgroundColor: `${shiftType.color}08`,
+                            borderLeftColor: shiftType.color,
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-xs truncate" style={{ color: shiftType.color }}>
+                              {shift.users?.name}
+                            </div>
+                            <div className="text-gray-600 text-xs">
+                              {shift.start_time?.slice(0, 5)}-{shift.end_time?.slice(0, 5)}
+                              <span className="ml-1 text-gray-500">
+                                ({calculateShiftHours(shift.start_time, shift.end_time).toFixed(1)}h)
+                              </span>
+                            </div>
+                            {shift.notes && (
+                              <div className="text-gray-500 italic text-xs mt-1 bg-gray-50 px-1 py-0.5 rounded truncate">
+                                {shift.notes}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Pulsanti azione */}
+                          {(canEditShift(shift) || canDeleteShift(shift)) && (
+                            <div className="flex flex-col gap-0.5 ml-2">
+                              {canEditShift(shift) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleEditShift(shift)
+                                  }}
+                                  className="text-blue-500 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100 transition-colors"
+                                  title="Modifica turno"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </button>
+                              )}
+                              {canDeleteShift(shift) && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteShift(shift.id)
+                                  }}
+                                  className="text-red-500 hover:text-red-700 p-0.5 rounded hover:bg-red-100 transition-colors"
+                                  title="Elimina turno"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+
+                    {/* Pulsante aggiungi turno aeroporto */}
+                    {isLoggedIn && currentUser && !isPastDay && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs h-6 border-dashed border-2 hover:border-purple-300 hover:bg-purple-50"
+                        onClick={() => handleAddShift(formatDate(day))}
+                      >
+                        <Plus className="h-2.5 w-2.5 mr-1" />
+                        Aeroporto
                       </Button>
                     )}
                   </div>
