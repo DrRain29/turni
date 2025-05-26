@@ -6,18 +6,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  Plus,
-  Edit,
-  Trash2,
-  GripVertical,
-  Users,
-  Star,
-  ArrowRight,
-} from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, GripVertical, Star, ArrowRight } from "lucide-react"
 import type { Shift, ShiftType, User } from "@/types/database"
 import { cn } from "@/lib/utils"
 import { AddShiftDialog } from "./add-shift-dialog"
@@ -57,15 +46,6 @@ interface GroupedShift {
   displayOrder: number
   hasIRCAC: boolean
   hasSecondShift: boolean
-}
-
-interface EmployeeReport {
-  user_id: string
-  name: string
-  email: string
-  totalHours: number
-  shiftCount: number
-  shiftsByType: Record<string, { count: number; hours: number }>
 }
 
 export function WeeklyShiftsCalendar({
@@ -253,47 +233,6 @@ export function WeeklyShiftsCalendar({
     return groupedShifts
   }
 
-  // Genera report dipendenti (solo per settimana corrente)
-  const generateEmployeeReport = (): EmployeeReport[] => {
-    if (!isCurrentWeek()) return []
-
-    const userReports: Record<string, EmployeeReport> = {}
-
-    // Inizializza tutti gli utenti
-    users.forEach((user) => {
-      userReports[user.id] = {
-        user_id: user.id,
-        name: user.name,
-        email: user.email,
-        totalHours: 0,
-        shiftCount: 0,
-        shiftsByType: {},
-      }
-    })
-
-    // Calcola statistiche dai turni
-    shifts.forEach((shift) => {
-      const userId = shift.user_id
-      if (!userReports[userId]) return
-
-      const hours = calculateShiftHours(shift.start_time, shift.end_time)
-      const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
-
-      userReports[userId].totalHours += hours
-      userReports[userId].shiftCount += 1
-
-      if (shiftType) {
-        if (!userReports[userId].shiftsByType[shiftType.name]) {
-          userReports[userId].shiftsByType[shiftType.name] = { count: 0, hours: 0 }
-        }
-        userReports[userId].shiftsByType[shiftType.name].count += 1
-        userReports[userId].shiftsByType[shiftType.name].hours += hours
-      }
-    })
-
-    return Object.values(userReports).sort((a, b) => b.totalHours - a.totalHours)
-  }
-
   const previousWeek = () => {
     const newWeek = new Date(currentWeek)
     newWeek.setDate(currentWeek.getDate() - 7)
@@ -311,11 +250,12 @@ export function WeeklyShiftsCalendar({
     return formatDate(date) === formatDate(today)
   }
 
+  // FIX: Corretto il controllo per i giorni passati
   const isPast = (date: Date) => {
     const today = new Date()
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-    const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-    return checkDate < todayDate
+    const todayString = formatDate(today)
+    const dateString = formatDate(date)
+    return dateString < todayString
   }
 
   const getWeekRange = () => {
@@ -570,8 +510,6 @@ export function WeeklyShiftsCalendar({
     )
   }
 
-  const employeeReport = generateEmployeeReport()
-
   return (
     <div className="w-full space-y-6">
       {/* Calendario principale */}
@@ -801,106 +739,6 @@ export function WeeklyShiftsCalendar({
           </div>
         </CardContent>
       </Card>
-
-      {/* Report dipendenti (solo per settimana corrente) */}
-      {isCurrentWeek() && employeeReport.length > 0 && (
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Report Dipendenti - Settimana Corrente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {employeeReport.map((employee, index) => (
-                <div
-                  key={employee.user_id}
-                  className={cn("p-4 rounded-lg border", {
-                    "bg-yellow-50 border-yellow-200": index === 0 && employee.totalHours > 0,
-                    "bg-gray-50 border-gray-200": employee.totalHours === 0,
-                    "bg-white border-gray-200": employee.totalHours > 0 && index !== 0,
-                  })}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        {index === 0 && employee.totalHours > 0 && <Star className="h-4 w-4 text-yellow-500" />}
-                        <span className="font-semibold text-lg">{employee.name}</span>
-                      </div>
-                      <span className="text-sm text-gray-500">{employee.email}</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-blue-600">{employee.totalHours.toFixed(1)}h</div>
-                      <div className="text-sm text-gray-500">{employee.shiftCount} turni</div>
-                    </div>
-                  </div>
-
-                  {/* Dettaglio turni per tipo */}
-                  {Object.keys(employee.shiftsByType).length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      {Object.entries(employee.shiftsByType).map(([shiftTypeName, data]) => {
-                        const shiftType = shiftTypes.find((st) => st.name === shiftTypeName)
-                        return (
-                          <div key={shiftTypeName} className="text-center p-2 bg-white rounded border">
-                            <div className="font-medium text-sm" style={{ color: shiftType?.color || "#666" }}>
-                              {shiftTypeName}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              {data.count} turni • {data.hours.toFixed(1)}h
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {employee.totalHours === 0 && (
-                    <div className="text-center text-gray-500 italic">Nessun turno assegnato questa settimana</div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Riepilogo totale */}
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h3 className="font-medium text-blue-900 mb-2">Riepilogo Settimana Corrente</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-blue-600">Ore Totali:</span>
-                  <div className="text-xl font-bold text-blue-900">
-                    {employeeReport.reduce((total, emp) => total + emp.totalHours, 0).toFixed(1)}h
-                  </div>
-                </div>
-                <div>
-                  <span className="text-blue-600">Turni Totali:</span>
-                  <div className="text-xl font-bold text-blue-900">
-                    {employeeReport.reduce((total, emp) => total + emp.shiftCount, 0)}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-blue-600">Dipendenti Attivi:</span>
-                  <div className="text-xl font-bold text-blue-900">
-                    {employeeReport.filter((emp) => emp.totalHours > 0).length}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-blue-600">Media Ore/Dipendente:</span>
-                  <div className="text-xl font-bold text-blue-900">
-                    {employeeReport.filter((emp) => emp.totalHours > 0).length > 0
-                      ? (
-                          employeeReport.reduce((total, emp) => total + emp.totalHours, 0) /
-                          employeeReport.filter((emp) => emp.totalHours > 0).length
-                        ).toFixed(1)
-                      : "0.0"}
-                    h
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Dialog per aggiungere turno */}
       {currentUser && (

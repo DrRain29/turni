@@ -3,18 +3,28 @@ import { createServerClient } from "@/lib/supabase"
 
 // Funzione per ottenere l'inizio della settimana (lunedì)
 function getWeekStart(date: Date): string {
-  const d = new Date(date)
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const day = d.getDay()
   const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  return new Date(d.setDate(diff)).toISOString().split("T")[0]
+  d.setDate(diff)
+
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const dayOfMonth = String(d.getDate()).padStart(2, "0")
+  return `${year}-${month}-${dayOfMonth}`
 }
 
 // Funzione per ottenere la fine della settimana (domenica)
 function getWeekEnd(date: Date): string {
-  const weekStart = new Date(getWeekStart(date))
-  const weekEnd = new Date(weekStart)
-  weekEnd.setDate(weekStart.getDate() + 6)
-  return weekEnd.toISOString().split("T")[0]
+  const weekStartDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const day = weekStartDate.getDay()
+  const diff = weekStartDate.getDate() - day + (day === 0 ? -6 : 1)
+  weekStartDate.setDate(diff + 6)
+
+  const year = weekStartDate.getFullYear()
+  const month = String(weekStartDate.getMonth() + 1).padStart(2, "0")
+  const dayOfMonth = String(weekStartDate.getDate()).padStart(2, "0")
+  return `${year}-${month}-${dayOfMonth}`
 }
 
 export async function GET() {
@@ -66,13 +76,34 @@ export async function GET() {
       return NextResponse.json({ error: "Errore nel caricamento degli utenti" }, { status: 500 })
     }
 
+    // Genera array dei giorni della settimana
+    const weekDays = []
+    const startDate = new Date(weekStart + "T00:00:00")
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startDate)
+      day.setDate(startDate.getDate() + i)
+      const dayString = day.toISOString().split("T")[0]
+      weekDays.push({
+        date: dayString,
+        dayName: day.toLocaleDateString("it-IT", { weekday: "long" }),
+        dayShort: day.toLocaleDateString("it-IT", { weekday: "short" }),
+        dayNumber: day.getDate(),
+        formatted: day.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }),
+      })
+    }
+
     // Calcola le statistiche per la settimana corrente
     const userStats = users.map((user) => {
       const userShifts = shifts?.filter((shift) => shift.user_id === user.id) || []
 
       let totalHours = 0
       const shiftsByType: Record<string, { count: number; hours: number; color: string }> = {}
-      const shiftsByDay: Record<string, { count: number; hours: number }> = {}
+      const shiftsByDay: Record<string, { count: number; hours: number; shifts: any[] }> = {}
+
+      // Inizializza tutti i giorni della settimana
+      weekDays.forEach((day) => {
+        shiftsByDay[day.date] = { count: 0, hours: 0, shifts: [] }
+      })
 
       userShifts.forEach((shift) => {
         // Calcola ore del turno
@@ -101,20 +132,21 @@ export async function GET() {
         shiftsByType[shiftTypeName].hours += hours
 
         // Raggruppa per giorno
-        const dayName = new Date(shift.date).toLocaleDateString("it-IT", { weekday: "long" })
-        if (!shiftsByDay[dayName]) {
-          shiftsByDay[dayName] = { count: 0, hours: 0 }
+        if (shiftsByDay[shift.date]) {
+          shiftsByDay[shift.date].count += 1
+          shiftsByDay[shift.date].hours += hours
+          shiftsByDay[shift.date].shifts.push({
+            ...shift,
+            hours: hours,
+          })
         }
-
-        shiftsByDay[dayName].count += 1
-        shiftsByDay[dayName].hours += hours
       })
 
       return {
         user_id: user.id,
         name: user.name,
         email: user.email,
-        totalHours: Math.round(totalHours * 10) / 10, // Arrotonda a 1 decimale
+        totalHours: Math.round(totalHours * 10) / 10,
         totalShifts: userShifts.length,
         shiftsByType,
         shiftsByDay,
@@ -130,11 +162,12 @@ export async function GET() {
     const activeUsers = userStats.filter((user) => user.totalHours > 0).length
 
     // Formatta le date per il frontend
-    const weekStartFormatted = new Date(weekStart).toLocaleDateString("it-IT")
-    const weekEndFormatted = new Date(weekEnd).toLocaleDateString("it-IT")
+    const weekStartFormatted = new Date(weekStart + "T00:00:00").toLocaleDateString("it-IT")
+    const weekEndFormatted = new Date(weekEnd + "T00:00:00").toLocaleDateString("it-IT")
 
     return NextResponse.json({
       userStats,
+      weekDays,
       weekInfo: {
         start: weekStart,
         end: weekEnd,

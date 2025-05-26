@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Users, Clock, TrendingUp, Star, Calendar, RefreshCw } from "lucide-react"
+import { BarChart3, Users, Clock, TrendingUp, Star, Calendar, RefreshCw, MapPin } from "lucide-react"
 
 interface UserStats {
   user_id: string
@@ -13,7 +13,15 @@ interface UserStats {
   totalHours: number
   totalShifts: number
   shiftsByType: Record<string, { count: number; hours: number; color: string }>
-  shiftsByDay: Record<string, { count: number; hours: number }>
+  shiftsByDay: Record<string, { count: number; hours: number; shifts: any[] }>
+}
+
+interface WeekDay {
+  date: string
+  dayName: string
+  dayShort: string
+  dayNumber: number
+  formatted: string
 }
 
 interface WeekInfo {
@@ -34,6 +42,7 @@ interface StatsSummary {
 
 interface StatisticsData {
   userStats: UserStats[]
+  weekDays: WeekDay[]
   weekInfo: WeekInfo
   summary: StatsSummary
 }
@@ -107,8 +116,6 @@ export function StatisticsPanel() {
     )
   }
 
-  const dayNames = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
-
   return (
     <div className="space-y-6">
       {/* Header con info settimana */}
@@ -176,23 +183,64 @@ export function StatisticsPanel() {
         </CardContent>
       </Card>
 
-      {/* Statistiche per dipendente */}
+      {/* Mappa ore giornaliere */}
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Mappa Ore Giornaliere
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-7 gap-2">
+            {data.weekDays.map((day) => {
+              const dayTotalHours = data.userStats.reduce((total, user) => {
+                return total + (user.shiftsByDay[day.date]?.hours || 0)
+              }, 0)
+
+              const dayTotalShifts = data.userStats.reduce((total, user) => {
+                return total + (user.shiftsByDay[day.date]?.count || 0)
+              }, 0)
+
+              const isToday = day.date === new Date().toISOString().split("T")[0]
+
+              return (
+                <div
+                  key={day.date}
+                  className={`p-3 rounded-lg border text-center ${
+                    isToday ? "bg-blue-50 border-blue-200" : "bg-gray-50 border-gray-200"
+                  }`}
+                >
+                  <div className="font-medium text-sm text-gray-700 capitalize">{day.dayShort}</div>
+                  <div className="text-lg font-bold text-gray-900">{day.dayNumber}</div>
+                  <div className="mt-2">
+                    <div className="text-lg font-bold text-blue-600">{dayTotalHours.toFixed(1)}h</div>
+                    <div className="text-xs text-gray-500">{dayTotalShifts} turni</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Report dipendenti */}
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Ore per Dipendente - Settimana Corrente
+            Report Dipendenti - Settimana Corrente
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {data.userStats.map((user, index) => (
+            {data.userStats.map((employee, index) => (
               <div
-                key={user.user_id}
+                key={employee.user_id}
                 className={`p-4 rounded-lg border transition-all ${
-                  index === 0 && user.totalHours > 0
+                  index === 0 && employee.totalHours > 0
                     ? "bg-yellow-50 border-yellow-200 shadow-md"
-                    : user.totalHours === 0
+                    : employee.totalHours === 0
                       ? "bg-gray-50 border-gray-200"
                       : "bg-white border-gray-200 hover:shadow-sm"
                 }`}
@@ -200,9 +248,9 @@ export function StatisticsPanel() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
-                      {index === 0 && user.totalHours > 0 && <Star className="h-4 w-4 text-yellow-500" />}
-                      <span className="font-semibold text-lg">{user.name}</span>
-                      {index < 3 && user.totalHours > 0 && (
+                      {index === 0 && employee.totalHours > 0 && <Star className="h-4 w-4 text-yellow-500" />}
+                      <span className="font-semibold text-lg">{employee.name}</span>
+                      {index < 3 && employee.totalHours > 0 && (
                         <Badge variant={index === 0 ? "default" : "secondary"} className="text-xs">
                           #{index + 1}
                         </Badge>
@@ -210,33 +258,33 @@ export function StatisticsPanel() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-blue-600">{user.totalHours}h</div>
-                    <div className="text-sm text-gray-500">{user.totalShifts} turni</div>
+                    <div className="text-2xl font-bold text-blue-600">{employee.totalHours}h</div>
+                    <div className="text-sm text-gray-500">{employee.totalShifts} turni</div>
                   </div>
                 </div>
 
                 {/* Barra di progresso visuale */}
-                {user.totalHours > 0 && data.summary.totalHours > 0 && (
+                {employee.totalHours > 0 && data.summary.totalHours > 0 && (
                   <div className="mb-3">
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                         style={{
-                          width: `${Math.min((user.totalHours / data.summary.totalHours) * 100 * 5, 100)}%`,
+                          width: `${Math.min((employee.totalHours / data.summary.totalHours) * 100 * 5, 100)}%`,
                         }}
                       ></div>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      {((user.totalHours / data.summary.totalHours) * 100).toFixed(1)}% del totale settimanale
+                      {((employee.totalHours / data.summary.totalHours) * 100).toFixed(1)}% del totale settimanale
                     </div>
                   </div>
                 )}
 
                 {/* Dettaglio turni per tipo */}
-                {Object.keys(user.shiftsByType).length > 0 ? (
+                {Object.keys(employee.shiftsByType).length > 0 ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {Object.entries(user.shiftsByType).map(([typeName, typeData]) => (
+                      {Object.entries(employee.shiftsByType).map(([typeName, typeData]) => (
                         <div key={typeName} className="text-center p-2 bg-white rounded border text-xs">
                           <div className="font-medium" style={{ color: typeData.color }}>
                             {typeName}
@@ -248,23 +296,31 @@ export function StatisticsPanel() {
                       ))}
                     </div>
 
-                    {/* Distribuzione per giorno */}
-                    {Object.keys(user.shiftsByDay).length > 0 && (
-                      <div>
-                        <div className="text-sm font-medium text-gray-700 mb-2">Distribuzione settimanale:</div>
-                        <div className="grid grid-cols-7 gap-1">
-                          {dayNames.map((day) => {
-                            const dayData = user.shiftsByDay[day]
-                            return (
-                              <div key={day} className="text-center p-1 bg-gray-50 rounded text-xs">
-                                <div className="font-medium text-gray-600 capitalize">{day.slice(0, 3)}</div>
-                                <div className="text-gray-800">{dayData ? `${dayData.hours.toFixed(1)}h` : "-"}</div>
+                    {/* Distribuzione per giorno con mappa visuale */}
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-2">Distribuzione settimanale:</div>
+                      <div className="grid grid-cols-7 gap-1">
+                        {data.weekDays.map((day) => {
+                          const dayData = employee.shiftsByDay[day.date]
+                          const hasShifts = dayData && dayData.hours > 0
+
+                          return (
+                            <div
+                              key={day.date}
+                              className={`text-center p-2 rounded text-xs ${
+                                hasShifts ? "bg-blue-50 border border-blue-200" : "bg-gray-50"
+                              }`}
+                            >
+                              <div className="font-medium text-gray-600 capitalize">{day.dayShort}</div>
+                              <div className="text-gray-800 font-bold">
+                                {hasShifts ? `${dayData.hours.toFixed(1)}h` : "-"}
                               </div>
-                            )
-                          })}
-                        </div>
+                              {hasShifts && <div className="text-gray-500 text-xs">{dayData.count} turni</div>}
+                            </div>
+                          )
+                        })}
                       </div>
-                    )}
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center text-gray-500 italic text-sm">Nessun turno questa settimana</div>
