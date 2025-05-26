@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
-import { LogIn } from "lucide-react"
+import { LogIn, Eye, EyeOff } from "lucide-react"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const { login } = useAuth()
@@ -54,41 +55,32 @@ export function LoginForm() {
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Inserisci la tua password"
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Inserisci la tua password"
+                required
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Accesso in corso..." : "Accedi"}
           </Button>
         </form>
-        <div className="mt-4 text-sm text-gray-600">
-          <p>
-            <strong>Utenti Entermed:</strong>
-          </p>
-          <div className="space-y-1 mt-2">
-            <p>
-              <strong>Vincenzo Pedone</strong> (Admin): vpedone@entermed.it
-            </p>
-            <p>
-              <strong>Giorgio Geraci</strong> (Admin): ggeraci@entermed.it
-            </p>
-            <p>
-              <strong>Piero Terrana</strong>: pterrana@entermed.it
-            </p>
-            <p>
-              <strong>Cristian Fazio</strong>: cfazio@entermed.it
-            </p>
-          </div>
-          <p className="mt-2">
-            <strong>Password:</strong> Vincenzo: @Vincenzo29 | Altri: 1234
-          </p>
+        <div className="mt-4 text-sm text-gray-600 text-center">
+          <p>Contatta l'amministratore per le credenziali di accesso</p>
         </div>
       </CardContent>
     </Card>
