@@ -86,10 +86,11 @@ export function WeeklyShiftsCalendar({
 
   // Calcola l'inizio della settimana (lunedì)
   const getWeekStart = (date: Date) => {
-    const d = new Date(date)
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate()) // Evita problemi di fuso orario
     const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-    return new Date(d.setDate(diff))
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Lunedì come primo giorno
+    d.setDate(diff)
+    return d
   }
 
   // Verifica se è la settimana corrente
@@ -108,7 +109,10 @@ export function WeeklyShiftsCalendar({
   })
 
   const formatDate = (date: Date) => {
-    return date.toISOString().split("T")[0]
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
   }
 
   const formatDisplayDate = (date: Date) => {
@@ -309,8 +313,9 @@ export function WeeklyShiftsCalendar({
 
   const isPast = (date: Date) => {
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    return date < today
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    return checkDate < todayDate
   }
 
   const getWeekRange = () => {
