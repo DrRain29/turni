@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
-import { SPLIT_SHIFT_USERS } from "@/types/database"
+import { FLEXIBLE_HOURS_USERS } from "@/types/database"
 
 // Funzione helper per calcolare le ore di un turno
 function calculateShiftHours(startTime: string, endTime: string): number {
@@ -50,13 +50,13 @@ async function calculateUserDailyHours(
   return totalHours
 }
 
-// Verifica se l'utente può fare turni spezzati
-async function canUserHaveSplitShifts(supabase: any, userId: string): Promise<boolean> {
+// Verifica se l'utente può fare turni con ore flessibili
+async function canUserHaveFlexibleHours(supabase: any, userId: string): Promise<boolean> {
   const { data: user, error } = await supabase.from("users").select("email").eq("id", userId).single()
 
   if (error || !user) return false
 
-  return SPLIT_SHIFT_USERS.includes(user.email)
+  return FLEXIBLE_HOURS_USERS.includes(user.email)
 }
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
@@ -104,10 +104,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // Calcola le ore totali dopo la modifica
     const totalHours = existingHours + newShiftHours
 
-    // Verifica se l'utente può fare turni spezzati
-    const canSplitShifts = await canUserHaveSplitShifts(supabase, finalUserId)
+    // Verifica se l'utente può fare turni con ore flessibili
+    const canFlexibleHours = await canUserHaveFlexibleHours(supabase, finalUserId)
 
-    // Verifica i limiti di ore (aggiornato a 3 ore minimo)
+    // Verifica i limiti di ore (aggiornato a 2 ore minimo)
     if (totalHours > 8) {
       return NextResponse.json(
         {
@@ -117,11 +117,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    // Solo per utenti che non possono fare turni spezzati, verifica il minimo di 3 ore
-    if (!canSplitShifts && totalHours < 3) {
+    // Solo per utenti che non possono fare ore flessibili, verifica il minimo di 2 ore
+    if (!canFlexibleHours && totalHours < 2) {
       return NextResponse.json(
         {
-          error: `Minimo 3 ore al giorno richieste. Ore totali dopo la modifica: ${totalHours.toFixed(1)}h`,
+          error: `Minimo 2 ore al giorno richieste. Ore totali dopo la modifica: ${totalHours.toFixed(1)}h`,
         },
         { status: 400 },
       )
@@ -241,14 +241,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     // Calcola le ore rimanenti dopo l'eliminazione
     const remainingHours = await calculateUserDailyHours(supabase, shift.user_id, shift.date, params.id)
 
-    // Verifica se l'utente può fare turni spezzati
-    const canSplitShifts = await canUserHaveSplitShifts(supabase, shift.user_id)
+    // Verifica se l'utente può fare turni con ore flessibili
+    const canFlexibleHours = await canUserHaveFlexibleHours(supabase, shift.user_id)
 
-    // Se l'utente ha altri turni nella stessa data e non può fare turni spezzati, verifica che rimangano almeno 3 ore
-    if (!canSplitShifts && remainingHours > 0 && remainingHours < 3) {
+    // Se l'utente ha altri turni nella stessa data e non può fare ore flessibili, verifica che rimangano almeno 2 ore
+    if (!canFlexibleHours && remainingHours > 0 && remainingHours < 2) {
       return NextResponse.json(
         {
-          error: `Non è possibile eliminare il turno: rimarrebbero solo ${remainingHours.toFixed(1)} ore (minimo 3 ore richieste)`,
+          error: `Non è possibile eliminare il turno: rimarrebbero solo ${remainingHours.toFixed(1)} ore (minimo 2 ore richieste)`,
         },
         { status: 400 },
       )

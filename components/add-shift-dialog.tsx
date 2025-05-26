@@ -136,7 +136,7 @@ export function AddShiftDialog({
   }
 
   const selectedUser = users.find((u) => u.id === selectedUserId)
-  const canSplitShifts = selectedUser?.email === "vpedone@entermed.it"
+  const canFlexibleHours = selectedUser?.email === "vpedone@entermed.it"
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -163,13 +163,7 @@ export function AddShiftDialog({
                 <SelectContent>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
-                      <div className="flex items-center gap-2">
-                        {user.email === "vpedone@entermed.it" && <Star className="h-3 w-3 text-yellow-500" />}
-                        {user.name}
-                        {user.email === "vpedone@entermed.it" && (
-                          <span className="text-xs text-gray-500">(Turni spezzati)</span>
-                        )}
-                      </div>
+                      {user.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -247,18 +241,6 @@ export function AddShiftDialog({
             </div>
           )}
 
-          {/* Avviso per turni spezzati */}
-          {canSplitShifts && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-center gap-2 text-sm text-yellow-800">
-                <Star className="h-4 w-4" />
-                <span>
-                  <strong>Vincenzo - Turni Spezzati:</strong> Puoi creare turni senza limite minimo di ore
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Informazioni ore calcolate */}
           {calculatedHours > 0 && (
             <div className="p-3 bg-blue-50 rounded-lg">
@@ -268,10 +250,10 @@ export function AddShiftDialog({
                   <strong>Ore turno:</strong> {calculatedHours.toFixed(1)} ore
                 </span>
               </div>
-              {!canSplitShifts && calculatedHours < 3 && (
+              {!canFlexibleHours && calculatedHours < 2 && (
                 <div className="flex items-center gap-2 text-sm mt-2 text-amber-700">
                   <AlertTriangle className="h-4 w-4" />
-                  <span>Attenzione: Minimo 3 ore al giorno richieste</span>
+                  <span>Attenzione: Minimo 2 ore al giorno richieste</span>
                 </div>
               )}
               {calculatedHours > 8 && (

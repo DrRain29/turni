@@ -58,8 +58,8 @@ export interface AuthUser {
 
 // Helper per identificare turni con orari fissi
 export const FIXED_TIME_SHIFTS = ["Aeroporto", "IRCAC"]
-export const MINIMUM_DAILY_HOURS = 3 // Cambiato da 4 a 3
+export const MINIMUM_DAILY_HOURS = 2 // Cambiato da 3 a 2
 export const MAXIMUM_DAILY_HOURS = 8
 
-// Utenti che possono fare turni spezzati
-export const SPLIT_SHIFT_USERS = ["vpedone@entermed.it"] // Vincenzo può fare turni spezzati
+// Utenti che possono fare turni con meno ore (rimosso il concetto di "turni spezzati")
+export const FLEXIBLE_HOURS_USERS = ["vpedone@entermed.it"] // Vincenzo può fare turni con meno ore

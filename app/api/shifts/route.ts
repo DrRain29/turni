@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
-import { SPLIT_SHIFT_USERS } from "@/types/database"
+import { FLEXIBLE_HOURS_USERS } from "@/types/database"
 
 // Funzione helper per calcolare le ore di un turno
 function calculateShiftHours(startTime: string, endTime: string): number {
@@ -50,13 +50,13 @@ async function calculateUserDailyHours(
   return totalHours
 }
 
-// Verifica se l'utente può fare turni spezzati
-async function canUserHaveSplitShifts(supabase: any, userId: string): Promise<boolean> {
+// Verifica se l'utente può fare turni con ore flessibili
+async function canUserHaveFlexibleHours(supabase: any, userId: string): Promise<boolean> {
   const { data: user, error } = await supabase.from("users").select("email").eq("id", userId).single()
 
   if (error || !user) return false
 
-  return SPLIT_SHIFT_USERS.includes(user.email)
+  return FLEXIBLE_HOURS_USERS.includes(user.email)
 }
 
 export async function GET(request: NextRequest) {
@@ -134,10 +134,10 @@ export async function POST(request: NextRequest) {
     // Calcola le ore totali dopo l'aggiunta del nuovo turno
     const totalHours = existingHours + newShiftHours
 
-    // Verifica se l'utente può fare turni spezzati
-    const canSplitShifts = await canUserHaveSplitShifts(supabase, user_id)
+    // Verifica se l'utente può fare turni con ore flessibili
+    const canFlexibleHours = await canUserHaveFlexibleHours(supabase, user_id)
 
-    // Verifica i limiti di ore (aggiornato a 3 ore minimo)
+    // Verifica i limiti di ore (aggiornato a 2 ore minimo)
     if (totalHours > 8) {
       return NextResponse.json(
         {
@@ -147,11 +147,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Solo per utenti che non possono fare turni spezzati, verifica il minimo di 3 ore
-    if (!canSplitShifts && totalHours < 3) {
+    // Solo per utenti che non possono fare ore flessibili, verifica il minimo di 2 ore
+    if (!canFlexibleHours && totalHours < 2) {
       return NextResponse.json(
         {
-          error: `Minimo 3 ore al giorno richieste. Ore totali: ${totalHours.toFixed(1)}h`,
+          error: `Minimo 2 ore al giorno richieste. Ore totali: ${totalHours.toFixed(1)}h`,
         },
         { status: 400 },
       )

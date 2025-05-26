@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Edit, Save, X, Lock, AlertTriangle, Clock } from "lucide-react"
+import { Edit, Save, X, Lock, AlertTriangle, Clock, Star } from "lucide-react"
 import type { Shift, ShiftType, User } from "@/types/database"
 import { FIXED_TIME_SHIFTS } from "@/types/database"
 
@@ -143,6 +143,8 @@ export function EditShiftDialog({
   if (!shift) return null
 
   const canEditUser = currentUser.role === "admin"
+  const selectedUser = users.find((u) => u.id === selectedUserId)
+  const canFlexibleHours = selectedUser?.email === "vpedone@entermed.it"
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -195,10 +197,12 @@ export function EditShiftDialog({
               <SelectContent>
                 {shiftTypes.map((shiftType) => {
                   const isFixed = FIXED_TIME_SHIFTS.includes(shiftType.name)
+                  const isApertura = shiftType.name === "Apertura"
                   return (
                     <SelectItem key={shiftType.id} value={shiftType.id}>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: shiftType.color }}></div>
+                        {isApertura && <Star className="h-3 w-3 text-yellow-500" />}
                         <span>{shiftType.name}</span>
                         {isFixed && <Lock className="h-3 w-3 text-gray-500" />}
                       </div>
@@ -262,10 +266,10 @@ export function EditShiftDialog({
                   <strong>Ore turno:</strong> {calculatedHours.toFixed(1)} ore
                 </span>
               </div>
-              {calculatedHours < 4 && (
+              {!canFlexibleHours && calculatedHours < 2 && (
                 <div className="flex items-center gap-2 text-sm mt-2 text-amber-700">
                   <AlertTriangle className="h-4 w-4" />
-                  <span>Attenzione: Minimo 4 ore al giorno richieste</span>
+                  <span>Attenzione: Minimo 2 ore al giorno richieste</span>
                 </div>
               )}
               {calculatedHours > 8 && (

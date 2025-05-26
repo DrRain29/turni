@@ -6,7 +6,18 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, GripVertical, Users, Star } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Plus,
+  Edit,
+  Trash2,
+  GripVertical,
+  Users,
+  Star,
+  ArrowRight,
+} from "lucide-react"
 import type { Shift, ShiftType, User } from "@/types/database"
 import { cn } from "@/lib/utils"
 import { AddShiftDialog } from "./add-shift-dialog"
@@ -44,6 +55,8 @@ interface GroupedShift {
   shifts: Shift[]
   totalHours: number
   displayOrder: number
+  hasIRCAC: boolean
+  hasSecondShift: boolean
 }
 
 interface EmployeeReport {
@@ -53,7 +66,6 @@ interface EmployeeReport {
   totalHours: number
   shiftCount: number
   shiftsByType: Record<string, { count: number; hours: number }>
-  canSplitShifts: boolean
 }
 
 export function WeeklyShiftsCalendar({
@@ -78,6 +90,14 @@ export function WeeklyShiftsCalendar({
     const day = d.getDay()
     const diff = d.getDate() - day + (day === 0 ? -6 : 1)
     return new Date(d.setDate(diff))
+  }
+
+  // Verifica se è la settimana corrente
+  const isCurrentWeek = () => {
+    const today = new Date()
+    const currentWeekStart = getWeekStart(today)
+    const viewingWeekStart = getWeekStart(currentWeek)
+    return currentWeekStart.getTime() === viewingWeekStart.getTime()
   }
 
   const weekStart = getWeekStart(currentWeek)
@@ -109,7 +129,7 @@ export function WeeklyShiftsCalendar({
     return (endMinutes - startMinutes) / 60
   }
 
-  // Raggruppa i turni per utente e giorno, unendo IRCAC + turni pomeridiani
+  // Raggruppa i turni per utente e giorno
   const getGroupedShiftsForDay = (date: Date): GroupedShift[] => {
     const dateString = formatDate(date)
     const dayShifts = shifts.filter((shift) => shift.date === dateString)
@@ -136,6 +156,14 @@ export function WeeklyShiftsCalendar({
       const totalHours = group.shifts.reduce((total, shift) => {
         return total + calculateShiftHours(shift.start_time, shift.end_time)
       }, 0)
+
+      // Verifica se ha IRCAC e altri turni
+      const hasIRCAC = group.shifts.some((shift) => {
+        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+        return shiftType?.name === "IRCAC"
+      })
+
+      const hasSecondShift = group.shifts.length > 1
 
       // Ordina i turni dell'utente: Apertura SEMPRE per primo, poi IRCAC, poi altri, Chiusura per ultimo
       const sortedShifts = group.shifts.sort((a, b) => {
@@ -173,6 +201,8 @@ export function WeeklyShiftsCalendar({
         shifts: sortedShifts,
         totalHours,
         displayOrder,
+        hasIRCAC,
+        hasSecondShift,
       }
     })
 
@@ -180,8 +210,10 @@ export function WeeklyShiftsCalendar({
     return groupedShifts.sort((a, b) => a.displayOrder - b.displayOrder)
   }
 
-  // Genera report dipendenti
+  // Genera report dipendenti (solo per settimana corrente)
   const generateEmployeeReport = (): EmployeeReport[] => {
+    if (!isCurrentWeek()) return []
+
     const userReports: Record<string, EmployeeReport> = {}
 
     // Inizializza tutti gli utenti
@@ -193,7 +225,6 @@ export function WeeklyShiftsCalendar({
         totalHours: 0,
         shiftCount: 0,
         shiftsByType: {},
-        canSplitShifts: user.email === "vpedone@entermed.it", // Vincenzo può fare turni spezzati
       }
     })
 
@@ -405,20 +436,23 @@ export function WeeklyShiftsCalendar({
             </div>
           </div>
 
+          {/* Indicatore rientro ufficio tra primo e secondo turno */}
+          {group.hasIRCAC && group.hasSecondShift && group.shifts.length > 1 && (
+            <div className="flex items-center justify-center py-1">
+              <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full border border-blue-200">
+                <ArrowRight className="h-3 w-3" />
+                <span className="font-medium">Rientro Ufficio 14:00</span>
+              </div>
+            </div>
+          )}
+
           {/* Turni del gruppo */}
           <div className="space-y-1">
             {group.shifts.map((shift, shiftIndex) => {
               const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
               if (!shiftType) return null
 
-              const isIRCAC = shiftType.name === "IRCAC"
               const isApertura = shiftType.name === "Apertura"
-              const showCombined =
-                isIRCAC &&
-                group.shifts.some((s) => {
-                  const st = shiftTypes.find((type) => type.id === s.shift_type_id)
-                  return st?.name === "2° Turno"
-                })
 
               return (
                 <div
@@ -435,9 +469,6 @@ export function WeeklyShiftsCalendar({
                       <span className="font-medium text-xs truncate" style={{ color: shiftType.color }}>
                         {shiftType.name}
                       </span>
-                      {showCombined && isIRCAC && (
-                        <span className="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded">→ Uff. 14:00</span>
-                      )}
                     </div>
                     <div className="text-gray-600 text-xs">
                       {shift.start_time?.slice(0, 5)}-{shift.end_time?.slice(0, 5)}
@@ -501,6 +532,11 @@ export function WeeklyShiftsCalendar({
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               Turni Settimanali
+              {!isCurrentWeek() && (
+                <Badge variant="outline" className="ml-2">
+                  Settimana Passata/Futura
+                </Badge>
+              )}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={previousWeek}>
@@ -513,7 +549,7 @@ export function WeeklyShiftsCalendar({
             </div>
           </div>
 
-          {/* Legenda tipi di turno con nuovi colori */}
+          {/* Legenda tipi di turno */}
           <div className="flex flex-wrap gap-2 pt-2">
             {shiftTypes
               .sort((a, b) => {
@@ -533,16 +569,13 @@ export function WeeklyShiftsCalendar({
               ))}
           </div>
 
-          {/* Istruzioni drag & drop */}
+          {/* Istruzioni */}
           {isLoggedIn && currentUser && (
             <div className="text-xs text-gray-500 pt-2 bg-blue-50 p-2 rounded">
               💡 <strong>Suggerimento:</strong> Trascina i gruppi di turni per riordinarli nel giorno
-              {currentUser.email === "vpedone@entermed.it" && (
-                <span className="ml-2 text-blue-600">
-                  <Star className="h-3 w-3 inline mr-1" />
-                  <strong>Vincenzo:</strong> Puoi fare turni spezzati senza limite minimo ore
-                </span>
-              )}
+              <br />
+              <ArrowRight className="h-3 w-3 inline mr-1" />
+              <strong>Rientro Ufficio:</strong> Appare automaticamente quando un dipendente ha IRCAC + secondo turno
             </div>
           )}
         </CardHeader>
@@ -602,108 +635,105 @@ export function WeeklyShiftsCalendar({
         </CardContent>
       </Card>
 
-      {/* Report dipendenti */}
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Report Dipendenti - Settimana {getWeekRange()}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {employeeReport.map((employee, index) => (
-              <div
-                key={employee.user_id}
-                className={cn("p-4 rounded-lg border", {
-                  "bg-yellow-50 border-yellow-200": index === 0 && employee.totalHours > 0,
-                  "bg-gray-50 border-gray-200": employee.totalHours === 0,
-                  "bg-white border-gray-200": employee.totalHours > 0 && index !== 0,
-                })}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      {index === 0 && employee.totalHours > 0 && <Star className="h-4 w-4 text-yellow-500" />}
-                      <span className="font-semibold text-lg">{employee.name}</span>
-                      {employee.canSplitShifts && (
-                        <Badge variant="secondary" className="text-xs">
-                          Turni Spezzati
-                        </Badge>
-                      )}
+      {/* Report dipendenti (solo per settimana corrente) */}
+      {isCurrentWeek() && employeeReport.length > 0 && (
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Report Dipendenti - Settimana Corrente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {employeeReport.map((employee, index) => (
+                <div
+                  key={employee.user_id}
+                  className={cn("p-4 rounded-lg border", {
+                    "bg-yellow-50 border-yellow-200": index === 0 && employee.totalHours > 0,
+                    "bg-gray-50 border-gray-200": employee.totalHours === 0,
+                    "bg-white border-gray-200": employee.totalHours > 0 && index !== 0,
+                  })}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        {index === 0 && employee.totalHours > 0 && <Star className="h-4 w-4 text-yellow-500" />}
+                        <span className="font-semibold text-lg">{employee.name}</span>
+                      </div>
+                      <span className="text-sm text-gray-500">{employee.email}</span>
                     </div>
-                    <span className="text-sm text-gray-500">{employee.email}</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-blue-600">{employee.totalHours.toFixed(1)}h</div>
+                      <div className="text-sm text-gray-500">{employee.shiftCount} turni</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-blue-600">{employee.totalHours.toFixed(1)}h</div>
-                    <div className="text-sm text-gray-500">{employee.shiftCount} turni</div>
-                  </div>
-                </div>
 
-                {/* Dettaglio turni per tipo */}
-                {Object.keys(employee.shiftsByType).length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    {Object.entries(employee.shiftsByType).map(([shiftTypeName, data]) => {
-                      const shiftType = shiftTypes.find((st) => st.name === shiftTypeName)
-                      return (
-                        <div key={shiftTypeName} className="text-center p-2 bg-white rounded border">
-                          <div className="font-medium text-sm" style={{ color: shiftType?.color || "#666" }}>
-                            {shiftTypeName}
+                  {/* Dettaglio turni per tipo */}
+                  {Object.keys(employee.shiftsByType).length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      {Object.entries(employee.shiftsByType).map(([shiftTypeName, data]) => {
+                        const shiftType = shiftTypes.find((st) => st.name === shiftTypeName)
+                        return (
+                          <div key={shiftTypeName} className="text-center p-2 bg-white rounded border">
+                            <div className="font-medium text-sm" style={{ color: shiftType?.color || "#666" }}>
+                              {shiftTypeName}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {data.count} turni • {data.hours.toFixed(1)}h
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-600">
-                            {data.count} turni • {data.hours.toFixed(1)}h
-                          </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {employee.totalHours === 0 && (
+                    <div className="text-center text-gray-500 italic">Nessun turno assegnato questa settimana</div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Riepilogo totale */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-medium text-blue-900 mb-2">Riepilogo Settimana Corrente</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-blue-600">Ore Totali:</span>
+                  <div className="text-xl font-bold text-blue-900">
+                    {employeeReport.reduce((total, emp) => total + emp.totalHours, 0).toFixed(1)}h
                   </div>
-                )}
-
-                {employee.totalHours === 0 && (
-                  <div className="text-center text-gray-500 italic">Nessun turno assegnato questa settimana</div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Riepilogo totale */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h3 className="font-medium text-blue-900 mb-2">Riepilogo Settimana</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-blue-600">Ore Totali:</span>
-                <div className="text-xl font-bold text-blue-900">
-                  {employeeReport.reduce((total, emp) => total + emp.totalHours, 0).toFixed(1)}h
                 </div>
-              </div>
-              <div>
-                <span className="text-blue-600">Turni Totali:</span>
-                <div className="text-xl font-bold text-blue-900">
-                  {employeeReport.reduce((total, emp) => total + emp.shiftCount, 0)}
+                <div>
+                  <span className="text-blue-600">Turni Totali:</span>
+                  <div className="text-xl font-bold text-blue-900">
+                    {employeeReport.reduce((total, emp) => total + emp.shiftCount, 0)}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <span className="text-blue-600">Dipendenti Attivi:</span>
-                <div className="text-xl font-bold text-blue-900">
-                  {employeeReport.filter((emp) => emp.totalHours > 0).length}
+                <div>
+                  <span className="text-blue-600">Dipendenti Attivi:</span>
+                  <div className="text-xl font-bold text-blue-900">
+                    {employeeReport.filter((emp) => emp.totalHours > 0).length}
+                  </div>
                 </div>
-              </div>
-              <div>
-                <span className="text-blue-600">Media Ore/Dipendente:</span>
-                <div className="text-xl font-bold text-blue-900">
-                  {employeeReport.filter((emp) => emp.totalHours > 0).length > 0
-                    ? (
-                        employeeReport.reduce((total, emp) => total + emp.totalHours, 0) /
-                        employeeReport.filter((emp) => emp.totalHours > 0).length
-                      ).toFixed(1)
-                    : "0.0"}
-                  h
+                <div>
+                  <span className="text-blue-600">Media Ore/Dipendente:</span>
+                  <div className="text-xl font-bold text-blue-900">
+                    {employeeReport.filter((emp) => emp.totalHours > 0).length > 0
+                      ? (
+                          employeeReport.reduce((total, emp) => total + emp.totalHours, 0) /
+                          employeeReport.filter((emp) => emp.totalHours > 0).length
+                        ).toFixed(1)
+                      : "0.0"}
+                    h
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dialog per aggiungere turno */}
       {currentUser && (
