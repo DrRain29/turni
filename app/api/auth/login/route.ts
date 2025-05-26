@@ -7,10 +7,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient()
 
-    // Cerca l'utente nel database
+    // Cerca l'utente nel database (senza custom_password per ora)
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, email, name, password_hash, role, custom_password")
+      .select("id, email, name, password_hash, role")
       .eq("email", email)
       .single()
 
@@ -18,27 +18,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
 
-    // Verifica la password
+    // Verifica la password con la logica originale
     let isValidPassword = false
 
-    // Prima controlla se ha una password personalizzata E se non è null/vuota
-    if (user.custom_password && user.custom_password.trim() !== "") {
-      // Se l'utente ha una password personalizzata, usa quella
-      isValidPassword = password === user.custom_password
-    } else {
-      // Altrimenti usa le password predefinite originali
-      switch (email) {
-        case "vpedone@entermed.it":
-          isValidPassword = password === "@Vincenzo29"
-          break
-        case "pterrana@entermed.it":
-        case "cfazio@entermed.it":
-        case "ggeraci@entermed.it":
-          isValidPassword = password === "1234"
-          break
-        default:
-          isValidPassword = false
-      }
+    switch (email) {
+      case "vpedone@entermed.it":
+        isValidPassword = password === "@Vincenzo29"
+        break
+      case "pterrana@entermed.it":
+      case "cfazio@entermed.it":
+      case "ggeraci@entermed.it":
+        isValidPassword = password === "1234"
+        break
+      default:
+        isValidPassword = false
     }
 
     if (!isValidPassword) {
@@ -46,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Restituisce i dati dell'utente incluso il ruolo (senza password)
-    const { password_hash, custom_password, ...userWithoutPassword } = user
+    const { password_hash, ...userWithoutPassword } = user
     return NextResponse.json(userWithoutPassword)
   } catch (error) {
     console.error("Login error:", error)

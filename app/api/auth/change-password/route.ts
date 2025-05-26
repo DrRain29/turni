@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient()
 
-    // Verifica l'utente e la password corrente
+    // Verifica l'utente
     const { data: user, error: fetchError } = await supabase
       .from("users")
-      .select("id, email, custom_password")
+      .select("id, email")
       .eq("id", user_id)
       .single()
 
@@ -26,43 +26,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
     }
 
-    // Verifica la password corrente
+    // Verifica la password corrente usando la logica originale
     let isCurrentPasswordValid = false
 
-    if (user.custom_password) {
-      // Se ha una password personalizzata, usa quella
-      isCurrentPasswordValid = current_password === user.custom_password
-    } else {
-      // Altrimenti usa le password predefinite
-      switch (user.email) {
-        case "vpedone@entermed.it":
-          isCurrentPasswordValid = current_password === "@Vincenzo29"
-          break
-        case "pterrana@entermed.it":
-        case "cfazio@entermed.it":
-        case "ggeraci@entermed.it":
-          isCurrentPasswordValid = current_password === "1234"
-          break
-        default:
-          isCurrentPasswordValid = false
-      }
+    switch (user.email) {
+      case "vpedone@entermed.it":
+        isCurrentPasswordValid = current_password === "@Vincenzo29"
+        break
+      case "pterrana@entermed.it":
+      case "cfazio@entermed.it":
+      case "ggeraci@entermed.it":
+        isCurrentPasswordValid = current_password === "1234"
+        break
+      default:
+        isCurrentPasswordValid = false
     }
 
     if (!isCurrentPasswordValid) {
       return NextResponse.json({ error: "Password corrente non valida" }, { status: 401 })
     }
 
-    // Aggiorna la password
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({ custom_password: new_password })
-      .eq("id", user_id)
-
-    if (updateError) {
-      return NextResponse.json({ error: "Errore nell'aggiornamento della password" }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, message: "Password aggiornata con successo" })
+    // Per ora, restituiamo solo un messaggio di successo senza salvare nel database
+    // Implementeremo il salvataggio quando avremo aggiunto il campo al database
+    return NextResponse.json({
+      success: true,
+      message: "Funzionalità cambio password temporaneamente disabilitata - contatta l'amministratore",
+    })
   } catch (error) {
     console.error("Change password error:", error)
     return NextResponse.json({ error: "Errore del server" }, { status: 500 })
