@@ -209,6 +209,149 @@ export function WeeklyShiftsCalendar({
 
   // VISTA MOBILE - Lista giornaliera
   if (isMobile) {
+    // Funzione per organizzare i turni del giorno secondo l'ordine richiesto
+    const getOrganizedShiftsForDay = (day: Date) => {
+      const dayShifts = getShiftsForDay(day)
+
+      // Raggruppa per tipo di turno
+      const shiftsByType = dayShifts.reduce(
+        (groups, shift) => {
+          const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+          const typeName = shiftType?.name || "Altri"
+          if (!groups[typeName]) {
+            groups[typeName] = []
+          }
+          groups[typeName].push(shift)
+          return groups
+        },
+        {} as Record<string, Shift[]>,
+      )
+
+      // Organizza secondo l'ordine: Apertura, 2° Turno, doppi turni (IRCAC+altro), Chiusura, Aeroporto
+      const organizedShifts: Array<{
+        type: "single" | "double" | "airport"
+        shifts: Shift[]
+        user_name: string
+        user_id: string
+        totalHours: number
+        hasRientroUfficio: boolean
+      }> = []
+
+      // 1. Apertura
+      if (shiftsByType["Apertura"]) {
+        shiftsByType["Apertura"].forEach((shift) => {
+          organizedShifts.push({
+            type: "single",
+            shifts: [shift],
+            user_name: shift.users?.name || "Sconosciuto",
+            user_id: shift.user_id,
+            totalHours: calculateShiftHours(shift.start_time, shift.end_time),
+            hasRientroUfficio: false,
+          })
+        })
+      }
+
+      // 2. 2° Turno (solo quelli che non hanno IRCAC)
+      if (shiftsByType["2° Turno"]) {
+        shiftsByType["2° Turno"].forEach((shift) => {
+          // Verifica se questo utente ha anche IRCAC nello stesso giorno
+          const userHasIRCAC = dayShifts.some(
+            (s) => s.user_id === shift.user_id && shiftTypes.find((st) => st.id === s.shift_type_id)?.name === "IRCAC",
+          )
+
+          if (!userHasIRCAC) {
+            organizedShifts.push({
+              type: "single",
+              shifts: [shift],
+              user_name: shift.users?.name || "Sconosciuto",
+              user_id: shift.user_id,
+              totalHours: calculateShiftHours(shift.start_time, shift.end_time),
+              hasRientroUfficio: false,
+            })
+          }
+        })
+      }
+
+      // 3. Doppi turni (IRCAC + turno successivo)
+      if (shiftsByType["IRCAC"]) {
+        shiftsByType["IRCAC"].forEach((ircacShift) => {
+          const userOtherShifts = dayShifts.filter((s) => s.user_id === ircacShift.user_id && s.id !== ircacShift.id)
+
+          if (userOtherShifts.length > 0) {
+            // Ordina: IRCAC prima, poi gli altri
+            const allUserShifts = [ircacShift, ...userOtherShifts].sort((a, b) => {
+              const aType = shiftTypes.find((st) => st.id === a.shift_type_id)
+              const bType = shiftTypes.find((st) => st.id === b.shift_type_id)
+
+              if (aType?.name === "IRCAC") return -1
+              if (bType?.name === "IRCAC") return 1
+              return 0
+            })
+
+            const totalHours = allUserShifts.reduce(
+              (total, shift) => total + calculateShiftHours(shift.start_time, shift.end_time),
+              0,
+            )
+
+            organizedShifts.push({
+              type: "double",
+              shifts: allUserShifts,
+              user_name: ircacShift.users?.name || "Sconosciuto",
+              user_id: ircacShift.user_id,
+              totalHours,
+              hasRientroUfficio: true,
+            })
+          } else {
+            // IRCAC singolo
+            organizedShifts.push({
+              type: "single",
+              shifts: [ircacShift],
+              user_name: ircacShift.users?.name || "Sconosciuto",
+              user_id: ircacShift.user_id,
+              totalHours: calculateShiftHours(ircacShift.start_time, ircacShift.end_time),
+              hasRientroUfficio: false,
+            })
+          }
+        })
+      }
+
+      // 4. Chiusura (solo quelli che non hanno IRCAC)
+      if (shiftsByType["Chiusura"]) {
+        shiftsByType["Chiusura"].forEach((shift) => {
+          const userHasIRCAC = dayShifts.some(
+            (s) => s.user_id === shift.user_id && shiftTypes.find((st) => st.id === s.shift_type_id)?.name === "IRCAC",
+          )
+
+          if (!userHasIRCAC) {
+            organizedShifts.push({
+              type: "single",
+              shifts: [shift],
+              user_name: shift.users?.name || "Sconosciuto",
+              user_id: shift.user_id,
+              totalHours: calculateShiftHours(shift.start_time, shift.end_time),
+              hasRientroUfficio: false,
+            })
+          }
+        })
+      }
+
+      // 5. Aeroporto (alla fine)
+      if (shiftsByType["Aeroporto"]) {
+        shiftsByType["Aeroporto"].forEach((shift) => {
+          organizedShifts.push({
+            type: "airport",
+            shifts: [shift],
+            user_name: shift.users?.name || "Sconosciuto",
+            user_id: shift.user_id,
+            totalHours: calculateShiftHours(shift.start_time, shift.end_time),
+            hasRientroUfficio: false,
+          })
+        })
+      }
+
+      return organizedShifts
+    }
+
     return (
       <div className="w-full space-y-4">
         <Card className="w-full">
@@ -250,7 +393,7 @@ export function WeeklyShiftsCalendar({
 
           <CardContent className="space-y-4">
             {weekDays.map((day, index) => {
-              const dayShifts = getShiftsForDay(day)
+              const organizedShifts = getOrganizedShiftsForDay(day)
               const isCurrentDay = isToday(day)
               const isPastDay = isPast(day)
 
@@ -269,7 +412,7 @@ export function WeeklyShiftsCalendar({
                       <div className="font-semibold text-lg">
                         {dayNames[index]} {formatDisplayDate(day)}
                       </div>
-                      <div className="text-sm text-gray-500">{dayShifts.length} turni</div>
+                      <div className="text-sm text-gray-500">{organizedShifts.length} turni</div>
                     </div>
                     {isLoggedIn && currentUser && !isPastDay && (
                       <Button
@@ -284,78 +427,118 @@ export function WeeklyShiftsCalendar({
                     )}
                   </div>
 
-                  {/* Turni del giorno */}
-                  {dayShifts.length === 0 ? (
+                  {/* Turni del giorno organizzati */}
+                  {organizedShifts.length === 0 ? (
                     <div className="text-center text-gray-400 py-4 text-sm">Nessun turno programmato</div>
                   ) : (
                     <div className="space-y-3">
-                      {dayShifts.map((shift) => {
-                        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
-                        if (!shiftType) return null
-
-                        const isApertura = shiftType.name === "Apertura"
-                        const isAeroporto = shiftType.name === "Aeroporto"
-
-                        return (
-                          <div
-                            key={shift.id}
-                            className="border rounded-lg p-3"
-                            style={{ backgroundColor: `${shiftType.color}08`, borderColor: `${shiftType.color}40` }}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  {isApertura && <Star className="h-4 w-4 text-yellow-500" />}
-                                  {isAeroporto && <span className="text-lg">✈️</span>}
-                                  <span className="font-semibold" style={{ color: shiftType.color }}>
-                                    {shiftType.name}
-                                  </span>
-                                </div>
-                                <div className="text-sm text-gray-600 mb-1">
-                                  <strong>{shift.users?.name}</strong>
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                  {shift.start_time?.slice(0, 5)} - {shift.end_time?.slice(0, 5)}
-                                  <span className="ml-2 font-medium">
-                                    ({calculateShiftHours(shift.start_time, shift.end_time).toFixed(1)}h)
-                                  </span>
-                                </div>
-                                {shift.notes && (
-                                  <div className="text-sm text-gray-500 italic mt-2 bg-white p-2 rounded">
-                                    {shift.notes}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Pulsanti azione */}
-                              {(canEditShift(shift) || canDeleteShift(shift)) && (
-                                <div className="flex flex-col gap-1 ml-2">
-                                  {canEditShift(shift) && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleEditShift(shift)}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                  {canDeleteShift(shift) && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleDeleteShift(shift.id)}
-                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                </div>
+                      {organizedShifts.map((shiftGroup, groupIndex) => (
+                        <div key={`${shiftGroup.user_id}-${groupIndex}`} className="space-y-2">
+                          {/* Header del gruppo utente */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-base">{shiftGroup.user_name}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {shiftGroup.totalHours.toFixed(1)}h
+                              </Badge>
+                              {shiftGroup.type === "double" && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Doppio Turno
+                                </Badge>
+                              )}
+                              {shiftGroup.type === "airport" && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs bg-orange-50 border-orange-200 text-orange-700"
+                                >
+                                  ✈️ Aeroporto
+                                </Badge>
                               )}
                             </div>
                           </div>
-                        )
-                      })}
+
+                          {/* Turni del gruppo */}
+                          {shiftGroup.shifts.map((shift, shiftIndex) => {
+                            const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+                            if (!shiftType) return null
+
+                            const isApertura = shiftType.name === "Apertura"
+                            const isIRCAC = shiftType.name === "IRCAC"
+                            const showRientroUfficio =
+                              shiftGroup.hasRientroUfficio && isIRCAC && shiftIndex < shiftGroup.shifts.length - 1
+
+                            return (
+                              <div key={shift.id}>
+                                <div
+                                  className="border rounded-lg p-3 ml-4"
+                                  style={{
+                                    backgroundColor: `${shiftType.color}08`,
+                                    borderColor: `${shiftType.color}40`,
+                                  }}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        {isApertura && <Star className="h-4 w-4 text-yellow-500" />}
+                                        <span className="font-semibold" style={{ color: shiftType.color }}>
+                                          {shiftType.name}
+                                        </span>
+                                      </div>
+                                      <div className="text-sm text-gray-600">
+                                        {shift.start_time?.slice(0, 5)} - {shift.end_time?.slice(0, 5)}
+                                        <span className="ml-2 font-medium">
+                                          ({calculateShiftHours(shift.start_time, shift.end_time).toFixed(1)}h)
+                                        </span>
+                                      </div>
+                                      {shift.notes && (
+                                        <div className="text-sm text-gray-500 italic mt-2 bg-white p-2 rounded">
+                                          {shift.notes}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Pulsanti azione */}
+                                    {(canEditShift(shift) || canDeleteShift(shift)) && (
+                                      <div className="flex flex-col gap-1 ml-2">
+                                        {canEditShift(shift) && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleEditShift(shift)}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            <Edit className="h-3 w-3" />
+                                          </Button>
+                                        )}
+                                        {canDeleteShift(shift) && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDeleteShift(shift.id)}
+                                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Badge rientro ufficio dopo IRCAC */}
+                                {showRientroUfficio && (
+                                  <div className="flex items-center justify-center py-2 ml-4">
+                                    <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                                      <ArrowRight className="h-3 w-3" />
+                                      <span className="font-medium">Rientro Ufficio</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
