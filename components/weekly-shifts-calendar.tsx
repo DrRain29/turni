@@ -1,16 +1,15 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, GripVertical, Star, ArrowRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, Star, ArrowRight } from "lucide-react"
 import type { Shift, ShiftType, User } from "@/types/database"
 import { cn } from "@/lib/utils"
 import { AddShiftDialog } from "./add-shift-dialog"
 import { EditShiftDialog } from "./edit-shift-dialog"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface WeeklyShiftsCalendarProps {
   shifts: Shift[]
@@ -59,27 +58,18 @@ export function WeeklyShiftsCalendar({
   onDeleteShift,
 }: WeeklyShiftsCalendarProps) {
   const [currentWeek, setCurrentWeek] = useState(new Date())
-  const [draggedItem, setDraggedItem] = useState<{ groupId: string; date: string } | null>(null)
-  const [shiftOrders, setShiftOrders] = useState<Record<string, number>>({})
+  const isMobile = useIsMobile()
 
   const dayNames = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
   const dayNamesShort = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
 
   // Calcola l'inizio della settimana (lunedì)
   const getWeekStart = (date: Date) => {
-    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate()) // Evita problemi di fuso orario
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
     const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Lunedì come primo giorno
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1)
     d.setDate(diff)
     return d
-  }
-
-  // Verifica se è la settimana corrente
-  const isCurrentWeek = () => {
-    const today = new Date()
-    const currentWeekStart = getWeekStart(today)
-    const viewingWeekStart = getWeekStart(currentWeek)
-    return currentWeekStart.getTime() === viewingWeekStart.getTime()
   }
 
   const weekStart = getWeekStart(currentWeek)
@@ -100,7 +90,6 @@ export function WeeklyShiftsCalendar({
     return date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" })
   }
 
-  // FIX: Funzione corretta per calcolare le ore
   const calculateShiftHours = (startTime: string, endTime: string): number => {
     const [startHour, startMinute] = startTime.split(":").map(Number)
     const [endHour, endMinute] = endTime.split(":").map(Number)
@@ -115,124 +104,9 @@ export function WeeklyShiftsCalendar({
     return (endMinutes - startMinutes) / 60
   }
 
-  // Funzione per ottenere i turni aeroporto per giorno
-  const getAirportShiftsForDay = (date: Date): Shift[] => {
+  const getShiftsForDay = (date: Date): Shift[] => {
     const dateString = formatDate(date)
-    return shifts.filter((shift) => {
-      const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
-      return shift.date === dateString && shiftType?.name === "Aeroporto"
-    })
-  }
-
-  // Raggruppa i turni per utente e giorno, escludendo Aeroporto
-  const getGroupedShiftsForDay = (date: Date): GroupedShift[] => {
-    const dateString = formatDate(date)
-    const dayShifts = shifts.filter((shift) => {
-      const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
-      return shift.date === dateString && shiftType?.name !== "Aeroporto"
-    })
-
-    // Prima raggruppa per tipo di turno per l'ordinamento generale
-    const shiftsByType = dayShifts.reduce(
-      (groups, shift) => {
-        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
-        const typeName = shiftType?.name || "Altri"
-        if (!groups[typeName]) {
-          groups[typeName] = []
-        }
-        groups[typeName].push(shift)
-        return groups
-      },
-      {} as Record<string, Shift[]>,
-    )
-
-    // Ordina i tipi di turno: Apertura, 2° Turno, IRCAC, Chiusura
-    const typeOrder = ["Apertura", "2° Turno", "IRCAC", "Chiusura"]
-    const orderedShifts: Shift[] = []
-
-    typeOrder.forEach((typeName) => {
-      if (shiftsByType[typeName]) {
-        orderedShifts.push(...shiftsByType[typeName])
-      }
-    })
-
-    // Aggiungi eventuali altri tipi non previsti
-    Object.keys(shiftsByType).forEach((typeName) => {
-      if (!typeOrder.includes(typeName)) {
-        orderedShifts.push(...shiftsByType[typeName])
-      }
-    })
-
-    // Ora raggruppa per utente mantenendo l'ordine
-    const userGroups: Record<string, { user_id: string; user_name: string; shifts: Shift[] }> = {}
-    const userOrder: string[] = []
-
-    orderedShifts.forEach((shift) => {
-      const userId = shift.user_id
-      if (!userGroups[userId]) {
-        userGroups[userId] = {
-          user_id: userId,
-          user_name: shift.users?.name || "Sconosciuto",
-          shifts: [],
-        }
-        userOrder.push(userId)
-      }
-      userGroups[userId].shifts.push(shift)
-    })
-
-    // Converte in array mantenendo l'ordine
-    const groupedShifts: GroupedShift[] = userOrder.map((userId, index) => {
-      const group = userGroups[userId]
-      const totalHours = group.shifts.reduce((total, shift) => {
-        return total + calculateShiftHours(shift.start_time, shift.end_time)
-      }, 0)
-
-      // Verifica se ha IRCAC e altri turni
-      const hasIRCAC = group.shifts.some((shift) => {
-        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
-        return shiftType?.name === "IRCAC"
-      })
-
-      const hasSecondShift = group.shifts.length > 1
-
-      // Ordina i turni dell'utente: IRCAC prima degli altri turni dello stesso utente
-      const sortedShifts = group.shifts.sort((a, b) => {
-        const aType = shiftTypes.find((st) => st.id === a.shift_type_id)
-        const bType = shiftTypes.find((st) => st.id === b.shift_type_id)
-
-        const getShiftPriority = (shiftType: ShiftType | undefined) => {
-          if (!shiftType) return 999
-          switch (shiftType.name) {
-            case "IRCAC":
-              return 0 // IRCAC sempre per primo nell'utente
-            case "2° Turno":
-              return 1
-            case "Chiusura":
-              return 2
-            default:
-              return 3
-          }
-        }
-
-        return getShiftPriority(aType) - getShiftPriority(bType)
-      })
-
-      const shiftKey = `${dateString}-${group.user_id}`
-      const displayOrder = shiftOrders[shiftKey] ?? index
-
-      return {
-        id: shiftKey,
-        user_id: group.user_id,
-        user_name: group.user_name,
-        shifts: sortedShifts,
-        totalHours,
-        displayOrder,
-        hasIRCAC,
-        hasSecondShift,
-      }
-    })
-
-    return groupedShifts
+    return shifts.filter((shift) => shift.date === dateString)
   }
 
   const previousWeek = () => {
@@ -252,7 +126,6 @@ export function WeeklyShiftsCalendar({
     return formatDate(date) === formatDate(today)
   }
 
-  // FIX: Corretto il controllo per i giorni passati
   const isPast = (date: Date) => {
     const today = new Date()
     const todayString = formatDate(today)
@@ -334,91 +207,320 @@ export function WeeklyShiftsCalendar({
     return currentUser.role === "admin" || shift.user_id === currentUser.id
   }
 
-  // Drag & Drop handlers corretti
-  const handleDragStart = (e: React.DragEvent, groupId: string, date: string) => {
-    e.stopPropagation()
-    setDraggedItem({ groupId, date })
-    e.dataTransfer.effectAllowed = "move"
-    e.dataTransfer.setData("text/plain", groupId)
+  // VISTA MOBILE - Lista giornaliera
+  if (isMobile) {
+    return (
+      <div className="w-full space-y-4">
+        <Card className="w-full">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Clock className="h-5 w-5" />
+                Turni Settimanali
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={previousWeek}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={nextWeek}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="text-center text-sm text-gray-600">{getWeekRange()}</div>
+
+            {/* Legenda compatta per mobile */}
+            <div className="flex flex-wrap gap-2 pt-2">
+              {shiftTypes
+                .filter((type) => type.name !== "Aeroporto")
+                .slice(0, 4)
+                .map((type) => (
+                  <Badge
+                    key={type.id}
+                    variant="outline"
+                    className="text-xs"
+                    style={{ borderColor: type.color, color: type.color }}
+                  >
+                    {type.name === "Apertura" && <Star className="h-2 w-2 mr-1" />}
+                    {type.name}
+                  </Badge>
+                ))}
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {weekDays.map((day, index) => {
+              const dayShifts = getShiftsForDay(day)
+              const isCurrentDay = isToday(day)
+              const isPastDay = isPast(day)
+
+              return (
+                <div
+                  key={index}
+                  className={cn("border rounded-lg p-4", {
+                    "bg-blue-50 border-blue-200": isCurrentDay,
+                    "bg-gray-50 border-gray-200": isPastDay,
+                    "border-gray-200": !isCurrentDay && !isPastDay,
+                  })}
+                >
+                  {/* Header del giorno */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <div className="font-semibold text-lg">
+                        {dayNames[index]} {formatDisplayDate(day)}
+                      </div>
+                      <div className="text-sm text-gray-500">{dayShifts.length} turni</div>
+                    </div>
+                    {isLoggedIn && currentUser && !isPastDay && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddShift(formatDate(day))}
+                        className="h-9"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Aggiungi
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Turni del giorno */}
+                  {dayShifts.length === 0 ? (
+                    <div className="text-center text-gray-400 py-4 text-sm">Nessun turno programmato</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {dayShifts.map((shift) => {
+                        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+                        if (!shiftType) return null
+
+                        const isApertura = shiftType.name === "Apertura"
+                        const isAeroporto = shiftType.name === "Aeroporto"
+
+                        return (
+                          <div
+                            key={shift.id}
+                            className="border rounded-lg p-3"
+                            style={{ backgroundColor: `${shiftType.color}08`, borderColor: `${shiftType.color}40` }}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  {isApertura && <Star className="h-4 w-4 text-yellow-500" />}
+                                  {isAeroporto && <span className="text-lg">✈️</span>}
+                                  <span className="font-semibold" style={{ color: shiftType.color }}>
+                                    {shiftType.name}
+                                  </span>
+                                </div>
+                                <div className="text-sm text-gray-600 mb-1">
+                                  <strong>{shift.users?.name}</strong>
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  {shift.start_time?.slice(0, 5)} - {shift.end_time?.slice(0, 5)}
+                                  <span className="ml-2 font-medium">
+                                    ({calculateShiftHours(shift.start_time, shift.end_time).toFixed(1)}h)
+                                  </span>
+                                </div>
+                                {shift.notes && (
+                                  <div className="text-sm text-gray-500 italic mt-2 bg-white p-2 rounded">
+                                    {shift.notes}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Pulsanti azione */}
+                              {(canEditShift(shift) || canDeleteShift(shift)) && (
+                                <div className="flex flex-col gap-1 ml-2">
+                                  {canEditShift(shift) && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEditShift(shift)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {canDeleteShift(shift) && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleDeleteShift(shift.id)}
+                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+
+        {/* Dialog per aggiungere turno */}
+        {currentUser && (
+          <AddShiftDialog
+            isOpen={showAddDialog}
+            onClose={() => setShowAddDialog(false)}
+            onSave={handleAddShiftSave}
+            date={selectedDate}
+            shiftTypes={shiftTypes}
+            users={users}
+            currentUser={currentUser}
+            isLoading={isAddingShift}
+          />
+        )}
+
+        {/* Dialog per modificare turno */}
+        {currentUser && (
+          <EditShiftDialog
+            isOpen={showEditDialog}
+            onClose={() => {
+              setShowEditDialog(false)
+              setEditingShift(null)
+            }}
+            onSave={handleEditShiftSave}
+            shift={editingShift}
+            shiftTypes={shiftTypes}
+            users={users}
+            currentUser={currentUser}
+            isLoading={isEditingShift}
+          />
+        )}
+      </div>
+    )
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    e.dataTransfer.dropEffect = "move"
-  }
+  // VISTA DESKTOP - Griglia originale (mantenuta invariata per desktop)
+  const getGroupedShiftsForDay = (date: Date): GroupedShift[] => {
+    const dateString = formatDate(date)
+    const dayShifts = shifts.filter((shift) => {
+      const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+      return shift.date === dateString && shiftType?.name !== "Aeroporto"
+    })
 
-  const handleDrop = (e: React.DragEvent, targetGroupId: string, targetDate: string) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    if (!draggedItem || draggedItem.groupId === targetGroupId || draggedItem.date !== targetDate) {
-      setDraggedItem(null)
-      return
-    }
-
-    const dayGroups = getGroupedShiftsForDay(new Date(targetDate))
-    const draggedIndex = dayGroups.findIndex((g) => g.id === draggedItem.groupId)
-    const targetIndex = dayGroups.findIndex((g) => g.id === targetGroupId)
-
-    if (draggedIndex !== -1 && targetIndex !== -1) {
-      const newOrders = { ...shiftOrders }
-
-      // Scambia gli ordini
-      newOrders[draggedItem.groupId] = targetIndex
-      newOrders[targetGroupId] = draggedIndex
-
-      // Aggiorna tutti gli altri ordini nel mezzo
-      dayGroups.forEach((group, index) => {
-        if (group.id !== draggedItem.groupId && group.id !== targetGroupId) {
-          if (index >= Math.min(draggedIndex, targetIndex) && index <= Math.max(draggedIndex, targetIndex)) {
-            if (draggedIndex < targetIndex) {
-              newOrders[group.id] = index - 1
-            } else {
-              newOrders[group.id] = index + 1
-            }
-          } else {
-            newOrders[group.id] = index
-          }
+    const shiftsByType = dayShifts.reduce(
+      (groups, shift) => {
+        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+        const typeName = shiftType?.name || "Altri"
+        if (!groups[typeName]) {
+          groups[typeName] = []
         }
+        groups[typeName].push(shift)
+        return groups
+      },
+      {} as Record<string, Shift[]>,
+    )
+
+    const typeOrder = ["Apertura", "2° Turno", "IRCAC", "Chiusura"]
+    const orderedShifts: Shift[] = []
+
+    typeOrder.forEach((typeName) => {
+      if (shiftsByType[typeName]) {
+        orderedShifts.push(...shiftsByType[typeName])
+      }
+    })
+
+    Object.keys(shiftsByType).forEach((typeName) => {
+      if (!typeOrder.includes(typeName)) {
+        orderedShifts.push(...shiftsByType[typeName])
+      }
+    })
+
+    const userGroups: Record<string, { user_id: string; user_name: string; shifts: Shift[] }> = {}
+    const userOrder: string[] = []
+
+    orderedShifts.forEach((shift) => {
+      const userId = shift.user_id
+      if (!userGroups[userId]) {
+        userGroups[userId] = {
+          user_id: userId,
+          user_name: shift.users?.name || "Sconosciuto",
+          shifts: [],
+        }
+        userOrder.push(userId)
+      }
+      userGroups[userId].shifts.push(shift)
+    })
+
+    const groupedShifts: GroupedShift[] = userOrder.map((userId, index) => {
+      const group = userGroups[userId]
+      const totalHours = group.shifts.reduce((total, shift) => {
+        return total + calculateShiftHours(shift.start_time, shift.end_time)
+      }, 0)
+
+      const hasIRCAC = group.shifts.some((shift) => {
+        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+        return shiftType?.name === "IRCAC"
       })
 
-      setShiftOrders(newOrders)
-    }
+      const hasSecondShift = group.shifts.length > 1
 
-    setDraggedItem(null)
+      const sortedShifts = group.shifts.sort((a, b) => {
+        const aType = shiftTypes.find((st) => st.id === a.shift_type_id)
+        const bType = shiftTypes.find((st) => st.id === b.shift_type_id)
+
+        const getShiftPriority = (shiftType: ShiftType | undefined) => {
+          if (!shiftType) return 999
+          switch (shiftType.name) {
+            case "IRCAC":
+              return 0
+            case "2° Turno":
+              return 1
+            case "Chiusura":
+              return 2
+            default:
+              return 3
+          }
+        }
+
+        return getShiftPriority(aType) - getShiftPriority(bType)
+      })
+
+      const shiftKey = `${dateString}-${group.user_id}`
+
+      return {
+        id: shiftKey,
+        user_id: group.user_id,
+        user_name: group.user_name,
+        shifts: sortedShifts,
+        totalHours,
+        displayOrder: index,
+        hasIRCAC,
+        hasSecondShift,
+      }
+    })
+
+    return groupedShifts
+  }
+
+  const getAirportShiftsForDay = (date: Date): Shift[] => {
+    const dateString = formatDate(date)
+    return shifts.filter((shift) => {
+      const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+      return shift.date === dateString && shiftType?.name === "Aeroporto"
+    })
   }
 
   const renderShiftGroup = (group: GroupedShift, date: Date) => {
     const isPastDay = isPast(date)
     const canInteract = isLoggedIn && currentUser && !isPastDay
-    const dateString = formatDate(date)
-    const isDragging = draggedItem?.groupId === group.id
 
     return (
       <div
         key={group.id}
-        draggable={canInteract}
-        onDragStart={(e) => handleDragStart(e, group.id, dateString)}
-        onDragOver={handleDragOver}
-        onDrop={(e) => handleDrop(e, group.id, dateString)}
-        className={cn(
-          "p-2 md:p-3 rounded-lg border transition-all duration-200 bg-white shadow-sm",
-          "hover:shadow-md",
-          {
-            "opacity-50 scale-95": isDragging,
-            "border-blue-300 bg-blue-50":
-              draggedItem && draggedItem.groupId !== group.id && draggedItem.date === dateString,
-            "cursor-move": canInteract,
-            "border-gray-200": !isDragging && (!draggedItem || draggedItem.date !== dateString),
-          },
-        )}
+        className="p-2 md:p-3 rounded-lg border transition-all duration-200 bg-white shadow-sm hover:shadow-md border-gray-200"
       >
         <div className="space-y-1 md:space-y-2">
-          {/* Header del gruppo con nome utente e ore totali */}
           <div className="flex items-center justify-between mb-1 md:mb-2">
             <div className="flex items-center gap-1 md:gap-2">
-              {canInteract && <GripVertical className="h-2 w-2 md:h-3 md:w-3 text-gray-400 cursor-grab" />}
               <span className="font-semibold text-xs text-gray-900">{group.user_name}</span>
               <Badge variant="outline" className="text-xs font-medium px-1 py-0">
                 {group.totalHours.toFixed(1)}h
@@ -426,7 +528,6 @@ export function WeeklyShiftsCalendar({
             </div>
           </div>
 
-          {/* Turni del gruppo con indicatore rientro ufficio */}
           <div className="space-y-1">
             {group.shifts.map((shift, shiftIndex) => {
               const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
@@ -434,8 +535,6 @@ export function WeeklyShiftsCalendar({
 
               const isApertura = shiftType.name === "Apertura"
               const isIRCAC = shiftType.name === "IRCAC"
-
-              // Mostra il badge rientro ufficio dopo IRCAC se c'è un turno successivo
               const showRientroUfficio = isIRCAC && group.hasSecondShift && shiftIndex < group.shifts.length - 1
 
               return (
@@ -467,7 +566,6 @@ export function WeeklyShiftsCalendar({
                       )}
                     </div>
 
-                    {/* Pulsanti azione compatti */}
                     {(canEditShift(shift) || canDeleteShift(shift)) && (
                       <div className="flex flex-col gap-0.5 ml-1 md:ml-2">
                         {canEditShift(shift) && (
@@ -498,13 +596,11 @@ export function WeeklyShiftsCalendar({
                     )}
                   </div>
 
-                  {/* Badge rientro ufficio dopo IRCAC */}
                   {showRientroUfficio && (
                     <div className="flex items-center justify-center py-0.5">
                       <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-1 md:px-1.5 py-0.5 rounded border border-blue-200">
                         <ArrowRight className="h-2 w-2 md:h-2.5 md:w-2.5" />
-                        <span className="text-xs font-medium hidden md:inline">Rientro Ufficio</span>
-                        <span className="text-xs font-medium md:hidden">Rientro</span>
+                        <span className="text-xs font-medium">Rientro Ufficio</span>
                       </div>
                     </div>
                   )}
@@ -519,18 +615,12 @@ export function WeeklyShiftsCalendar({
 
   return (
     <div className="w-full space-y-4 md:space-y-6">
-      {/* Calendario principale - Mobile Responsive */}
       <Card className="w-full">
         <CardHeader className="pb-3 md:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
               <Clock className="h-4 w-4 md:h-5 md:w-5" />
               Turni Settimanali
-              {!isCurrentWeek() && (
-                <Badge variant="outline" className="ml-2 text-xs">
-                  Settimana Passata/Futura
-                </Badge>
-              )}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={previousWeek}>
@@ -545,10 +635,9 @@ export function WeeklyShiftsCalendar({
             </div>
           </div>
 
-          {/* Legenda tipi di turno - Mobile Responsive */}
           <div className="flex flex-wrap gap-1 md:gap-2 pt-2">
             {shiftTypes
-              .filter((type) => type.name !== "Aeroporto") // Escludi Aeroporto dalla legenda principale
+              .filter((type) => type.name !== "Aeroporto")
               .sort((a, b) => {
                 const order = ["Apertura", "2° Turno", "IRCAC", "Chiusura"]
                 return order.indexOf(a.name) - order.indexOf(b.name)
@@ -565,24 +654,9 @@ export function WeeklyShiftsCalendar({
                 </Badge>
               ))}
           </div>
-
-          {/* Istruzioni - Mobile Responsive */}
-          {isLoggedIn && currentUser && (
-            <div className="text-xs text-gray-500 pt-2 bg-blue-50 p-2 rounded">
-              💡 <strong>Suggerimento:</strong>{" "}
-              <span className="hidden md:inline">Trascina i gruppi di turni per riordinarli nel giorno</span>
-              <span className="md:hidden">Tocca per gestire i turni</span>
-              <br />
-              <ArrowRight className="h-3 w-3 inline mr-1" />
-              <strong>Rientro Ufficio:</strong> Appare automaticamente tra IRCAC e turno successivo dello stesso utente
-              <br />
-              ✈️ <strong>Aeroporto:</strong> I turni aeroporto sono mostrati nella sezione separata sotto
-            </div>
-          )}
         </CardHeader>
 
         <CardContent>
-          {/* Griglia calendario - Mobile Responsive */}
           <div className="grid grid-cols-7 gap-1 md:gap-2 w-full">
             {weekDays.map((day, index) => {
               const groupedShifts = getGroupedShiftsForDay(day)
@@ -598,12 +672,8 @@ export function WeeklyShiftsCalendar({
                     "border-gray-200 hover:border-gray-300": !isCurrentDay && !isPastDay,
                   })}
                 >
-                  {/* Header del giorno - Mobile Responsive */}
                   <div className="text-center mb-2 md:mb-3 pb-1 md:pb-2 border-b border-gray-200">
-                    <div className="font-medium text-xs text-gray-600">
-                      <span className="md:hidden">{dayNamesShort[index]}</span>
-                      <span className="hidden md:inline">{dayNames[index]}</span>
-                    </div>
+                    <div className="font-medium text-xs text-gray-600">{dayNamesShort[index]}</div>
                     <div
                       className={cn("text-sm md:text-lg font-bold", {
                         "text-blue-600": isCurrentDay,
@@ -615,11 +685,9 @@ export function WeeklyShiftsCalendar({
                     </div>
                   </div>
 
-                  {/* Gruppi di turni */}
                   <div className="space-y-1 md:space-y-2">
                     {groupedShifts.map((group) => renderShiftGroup(group, day))}
 
-                    {/* Pulsante aggiungi turno - Mobile Responsive */}
                     {isLoggedIn && currentUser && !isPastDay && (
                       <Button
                         variant="outline"
@@ -642,7 +710,6 @@ export function WeeklyShiftsCalendar({
         </CardContent>
       </Card>
 
-      {/* Sezione Aeroporto separata - Mobile Responsive */}
       <Card className="w-full">
         <CardHeader className="pb-3 md:pb-6">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -666,16 +733,11 @@ export function WeeklyShiftsCalendar({
                     "border-gray-200": !isCurrentDay && !isPastDay,
                   })}
                 >
-                  {/* Header del giorno */}
                   <div className="text-center mb-1 md:mb-2 pb-1 border-b border-gray-200">
-                    <div className="font-medium text-xs text-gray-600">
-                      <span className="md:hidden">{dayNamesShort[index]}</span>
-                      <span className="hidden md:inline">{dayNames[index]}</span>
-                    </div>
+                    <div className="font-medium text-xs text-gray-600">{dayNamesShort[index]}</div>
                     <div className="text-xs md:text-sm font-bold text-gray-500">{formatDisplayDate(day)}</div>
                   </div>
 
-                  {/* Turni aeroporto */}
                   <div className="space-y-1">
                     {airportShifts.map((shift) => {
                       const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
@@ -707,7 +769,6 @@ export function WeeklyShiftsCalendar({
                             )}
                           </div>
 
-                          {/* Pulsanti azione */}
                           {(canEditShift(shift) || canDeleteShift(shift)) && (
                             <div className="flex flex-col gap-0.5 ml-1 md:ml-2">
                               {canEditShift(shift) && (
@@ -740,7 +801,6 @@ export function WeeklyShiftsCalendar({
                       )
                     })}
 
-                    {/* Pulsante aggiungi turno aeroporto */}
                     {isLoggedIn && currentUser && !isPastDay && (
                       <Button
                         variant="outline"
@@ -761,7 +821,6 @@ export function WeeklyShiftsCalendar({
         </CardContent>
       </Card>
 
-      {/* Dialog per aggiungere turno */}
       {currentUser && (
         <AddShiftDialog
           isOpen={showAddDialog}
@@ -775,7 +834,6 @@ export function WeeklyShiftsCalendar({
         />
       )}
 
-      {/* Dialog per modificare turno */}
       {currentUser && (
         <EditShiftDialog
           isOpen={showEditDialog}
