@@ -256,10 +256,10 @@ export function AddShiftDialog({
                   <span>Attenzione: Minimo 2 ore al giorno richieste</span>
                 </div>
               )}
-              {calculatedHours > 8 && (
+              {calculatedHours > 9 && (
                 <div className="flex items-center gap-2 text-sm mt-2 text-red-700">
                   <AlertTriangle className="h-4 w-4" />
-                  <span>Attenzione: Massimo 8 ore al giorno consentite</span>
+                  <span>Attenzione: Massimo 9 ore al giorno consentite</span>
                 </div>
               )}
             </div>

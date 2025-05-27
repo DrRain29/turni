@@ -54,12 +54,11 @@ export function EditShiftDialog({
   const [isFixedTimeShift, setIsFixedTimeShift] = useState(false)
   const [calculatedHours, setCalculatedHours] = useState(0)
 
-  // Aggiungi questo controllo di sicurezza
-  if (!currentUser) {
-    return null
-  }
-
   useEffect(() => {
+    if (!currentUser) {
+      return
+    }
+
     if (shift) {
       setSelectedUserId(shift.user_id)
       setSelectedShiftTypeId(shift.shift_type_id)
@@ -74,7 +73,7 @@ export function EditShiftDialog({
         setIsFixedTimeShift(isFixed)
       }
     }
-  }, [shift, shiftTypes])
+  }, [shift, shiftTypes, currentUser])
 
   // Gestisce la selezione del tipo turno e imposta orari predefiniti/fissi
   useEffect(() => {
@@ -272,10 +271,10 @@ export function EditShiftDialog({
                   <span>Attenzione: Minimo 2 ore al giorno richieste</span>
                 </div>
               )}
-              {calculatedHours > 8 && (
+              {calculatedHours > 9 && (
                 <div className="flex items-center gap-2 text-sm mt-2 text-red-700">
                   <AlertTriangle className="h-4 w-4" />
-                  <span>Attenzione: Massimo 8 ore al giorno consentite</span>
+                  <span>Attenzione: Massimo 9 ore al giorno consentite</span>
                 </div>
               )}
             </div>

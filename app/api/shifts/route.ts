@@ -137,11 +137,11 @@ export async function POST(request: NextRequest) {
     // Verifica se l'utente può fare turni con ore flessibili
     const canFlexibleHours = await canUserHaveFlexibleHours(supabase, user_id)
 
-    // Verifica i limiti di ore (aggiornato a 2 ore minimo)
-    if (totalHours > 8) {
+    // Verifica i limiti di ore (aggiornato a 2 ore minimo, 9 ore massimo)
+    if (totalHours > 9) {
       return NextResponse.json(
         {
-          error: `Limite massimo di 8 ore al giorno superato. Ore attuali: ${existingHours.toFixed(1)}h, nuovo turno: ${newShiftHours.toFixed(1)}h, totale: ${totalHours.toFixed(1)}h`,
+          error: `Limite massimo di 9 ore al giorno superato. Ore attuali: ${existingHours.toFixed(1)}h, nuovo turno: ${newShiftHours.toFixed(1)}h, totale: ${totalHours.toFixed(1)}h`,
         },
         { status: 400 },
       )
