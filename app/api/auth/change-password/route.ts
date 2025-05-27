@@ -29,14 +29,23 @@ export async function POST(request: NextRequest) {
     // Verifica la password corrente usando username
     let isCurrentPasswordValid = false
 
-    // Ottieni l'username dall'email dell'utente (mapping temporaneo)
-    const usernameMap: Record<string, string> = {
+    // Mappa username alle email esistenti nel database
+    const usernameToEmailMap: Record<string, string> = {
+      pedonev: "vpedone@entermed.it",
+      terranap: "pterrana@entermed.it",
+      fazioc: "cfazio@entermed.it",
+      ggeraci: "ggeraci@entermed.it",
+    }
+
+    // Ottieni l'username dall'email dell'utente
+    const emailToUsernameMap: Record<string, string> = {
       "vpedone@entermed.it": "pedonev",
       "pterrana@entermed.it": "terranap",
       "cfazio@entermed.it": "fazioc",
+      "ggeraci@entermed.it": "ggeraci",
     }
 
-    const username = usernameMap[user.email] || user.email
+    const username = emailToUsernameMap[user.email] || user.email
 
     switch (username) {
       case "pedonev":
@@ -48,7 +57,7 @@ export async function POST(request: NextRequest) {
       case "fazioc":
         isCurrentPasswordValid = current_password === "@Silvia123"
         break
-      case "ggeraci@entermed.it":
+      case "ggeraci":
         isCurrentPasswordValid = current_password === "1234"
         break
       default:

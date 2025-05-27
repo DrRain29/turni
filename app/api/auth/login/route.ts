@@ -3,26 +3,37 @@ import { createServerClient } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { email, password } = await request.json() // 'email' ora contiene l'username
 
     const supabase = createServerClient()
 
-    // Cerca l'utente nel database per username
+    // Mappa username alle email esistenti nel database
+    const usernameToEmailMap: Record<string, string> = {
+      pedonev: "vpedone@entermed.it",
+      terranap: "pterrana@entermed.it",
+      fazioc: "cfazio@entermed.it",
+      ggeraci: "ggeraci@entermed.it", // Se esiste ancora
+    }
+
+    // Ottieni l'email dal mapping username
+    const actualEmail = usernameToEmailMap[email] || email
+
+    // Cerca l'utente nel database usando l'email mappata
     const { data: user, error } = await supabase
       .from("users")
       .select("id, email, name, password_hash, role")
-      .eq("email", email) // Temporaneamente manteniamo email, ma useremo username
+      .eq("email", actualEmail)
       .single()
 
     if (error || !user) {
       return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
 
-    // Verifica la password con username invece di email
+    // Verifica la password usando l'username inserito
     let isValidPassword = false
 
     switch (
-      email // Ora 'email' contiene l'username
+      email // 'email' contiene l'username inserito
     ) {
       case "pedonev":
         isValidPassword = password === "@Vincenzo29"
@@ -33,7 +44,7 @@ export async function POST(request: NextRequest) {
       case "fazioc":
         isValidPassword = password === "@Silvia123"
         break
-      case "ggeraci@entermed.it": // Mantieni questo se esiste ancora
+      case "ggeraci":
         isValidPassword = password === "1234"
         break
       default:
