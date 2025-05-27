@@ -7,27 +7,33 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient()
 
-    // Cerca l'utente nel database (senza custom_password per ora)
+    // Cerca l'utente nel database per username
     const { data: user, error } = await supabase
       .from("users")
       .select("id, email, name, password_hash, role")
-      .eq("email", email)
+      .eq("email", email) // Temporaneamente manteniamo email, ma useremo username
       .single()
 
     if (error || !user) {
       return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
 
-    // Verifica la password con la logica originale
+    // Verifica la password con username invece di email
     let isValidPassword = false
 
-    switch (email) {
-      case "vpedone@entermed.it":
+    switch (
+      email // Ora 'email' contiene l'username
+    ) {
+      case "pedonev":
         isValidPassword = password === "@Vincenzo29"
         break
-      case "pterrana@entermed.it":
-      case "cfazio@entermed.it":
-      case "ggeraci@entermed.it":
+      case "terranap":
+        isValidPassword = password === "@Anita123"
+        break
+      case "fazioc":
+        isValidPassword = password === "@Silvia123"
+        break
+      case "ggeraci@entermed.it": // Mantieni questo se esiste ancora
         isValidPassword = password === "1234"
         break
       default:

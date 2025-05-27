@@ -26,15 +26,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
     }
 
-    // Verifica la password corrente usando la logica originale
+    // Verifica la password corrente usando username
     let isCurrentPasswordValid = false
 
-    switch (user.email) {
-      case "vpedone@entermed.it":
+    // Ottieni l'username dall'email dell'utente (mapping temporaneo)
+    const usernameMap: Record<string, string> = {
+      "vpedone@entermed.it": "pedonev",
+      "pterrana@entermed.it": "terranap",
+      "cfazio@entermed.it": "fazioc",
+    }
+
+    const username = usernameMap[user.email] || user.email
+
+    switch (username) {
+      case "pedonev":
         isCurrentPasswordValid = current_password === "@Vincenzo29"
         break
-      case "pterrana@entermed.it":
-      case "cfazio@entermed.it":
+      case "terranap":
+        isCurrentPasswordValid = current_password === "@Anita123"
+        break
+      case "fazioc":
+        isCurrentPasswordValid = current_password === "@Silvia123"
+        break
       case "ggeraci@entermed.it":
         isCurrentPasswordValid = current_password === "1234"
         break

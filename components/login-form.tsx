@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { LogIn, Eye, EyeOff } from "lucide-react"
 
 export function LoginForm() {
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -23,7 +23,7 @@ export function LoginForm() {
     setIsLoading(true)
     setError("")
 
-    const success = await login(email, password)
+    const success = await login(username, password)
 
     if (!success) {
       setError("Credenziali non valide")
@@ -43,13 +43,13 @@ export function LoginForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="username">Username</Label>
             <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nome@entermed.it"
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Inserisci il tuo username"
               required
             />
           </div>
@@ -80,7 +80,7 @@ export function LoginForm() {
           </Button>
         </form>
         <div className="mt-4 text-sm text-gray-600 text-center">
-          <p>Contatta l'amministratore per le credenziali di accesso</p>
+          <p>Usa il tuo username e password per accedere</p>
         </div>
       </CardContent>
     </Card>
