@@ -93,85 +93,99 @@ export function AdminPanel({ vacations, onVacationDeleted, onVacationEdited }: A
   return (
     <>
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-red-600" />
+        <CardHeader className="pb-4 md:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <Shield className="h-5 w-5 md:h-6 md:w-6 text-red-600" />
             Pannello Amministratore
           </CardTitle>
-          <p className="text-sm text-gray-600">Come amministratore puoi gestire tutte le prenotazioni ferie</p>
+          <p className="text-sm md:text-base text-gray-600">
+            Come amministratore puoi gestire tutte le prenotazioni ferie
+          </p>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {vacations.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">Nessuna prenotazione presente</p>
+              <p className="text-gray-500 text-center py-6 md:py-8 text-sm md:text-base">
+                Nessuna prenotazione presente
+              </p>
             ) : (
               vacations.map((vacation) => (
-                <div key={vacation.id} className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                <div
+                  key={vacation.id}
+                  className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 border rounded-lg bg-gray-50 gap-3 md:gap-4"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-3 mb-2">
                       <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-gray-500" />
-                        <span className="font-medium">{vacation.users?.name}</span>
+                        <User className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                        <span className="font-medium text-sm md:text-base">{vacation.users?.name}</span>
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {vacation.users?.email}
-                      </Badge>
-                      {vacation.user_id === user.id && (
-                        <Badge variant="secondary" className="text-xs">
-                          Le tue ferie
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {vacation.users?.email}
                         </Badge>
-                      )}
+                        {vacation.user_id === user.id && (
+                          <Badge variant="secondary" className="text-xs">
+                            Le tue ferie
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-4 text-sm text-gray-600 mb-2">
                       <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>
+                        <Calendar className="h-4 w-4 flex-shrink-0" />
+                        <span className="text-sm md:text-base">
                           {formatDate(vacation.start_date)} - {formatDate(vacation.end_date)}
                         </span>
                       </div>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs w-fit">
                         {calculateDays(vacation.start_date, vacation.end_date)} giorni
                       </Badge>
                     </div>
                     {vacation.notes && (
-                      <p className="text-sm text-gray-600 mt-1 italic">
+                      <p className="text-sm text-gray-600 italic bg-white p-2 rounded border">
                         <strong>Descrizione:</strong> "{vacation.notes}"
                       </p>
                     )}
                   </div>
 
-                  {/* Pulsanti di azione */}
-                  <div className="flex items-center gap-2">
+                  {/* Pulsanti di azione - Mobile Responsive */}
+                  <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto">
                     {/* Pulsante Modifica */}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleEditVacation(vacation)}
                       disabled={isEditing}
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      className="flex-1 md:flex-none text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm md:text-base h-9 md:h-8"
                     >
-                      <Edit className="h-4 w-4 mr-1" />
+                      <Edit className="h-4 w-4 mr-1 md:mr-2" />
                       Modifica
                     </Button>
 
                     {/* Pulsante Elimina */}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm" disabled={deletingId === vacation.id}>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={deletingId === vacation.id}
+                          className="flex-1 md:flex-none text-sm md:text-base h-9 md:h-8"
+                        >
                           {deletingId === vacation.id ? (
                             "Eliminando..."
                           ) : (
                             <>
-                              <Trash2 className="h-4 w-4 mr-1" />
+                              <Trash2 className="h-4 w-4 mr-1 md:mr-2" />
                               Elimina
                             </>
                           )}
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent>
+                      <AlertDialogContent className="max-w-md mx-4 md:max-w-lg">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
-                          <AlertDialogDescription>
+                          <AlertDialogTitle className="text-base md:text-lg">Conferma eliminazione</AlertDialogTitle>
+                          <AlertDialogDescription className="text-sm md:text-base">
                             Sei sicuro di voler eliminare le ferie di <strong>{vacation.users?.name}</strong> dal{" "}
                             <strong>{formatDate(vacation.start_date)}</strong> al{" "}
                             <strong>{formatDate(vacation.end_date)}</strong>?
@@ -187,11 +201,11 @@ export function AdminPanel({ vacations, onVacationDeleted, onVacationEdited }: A
                             Questa azione non può essere annullata.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Annulla</AlertDialogCancel>
+                        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                          <AlertDialogCancel className="w-full sm:w-auto">Annulla</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => handleDeleteVacation(vacation.id)}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="w-full sm:w-auto bg-red-600 hover:bg-red-700"
                           >
                             Elimina
                           </AlertDialogAction>
@@ -204,32 +218,34 @@ export function AdminPanel({ vacations, onVacationDeleted, onVacationEdited }: A
             )}
           </div>
 
-          {/* Statistiche rapide */}
+          {/* Statistiche rapide - Mobile Responsive */}
           {vacations.length > 0 && (
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h3 className="font-medium text-blue-900 mb-2">Statistiche Rapide</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-blue-600 font-medium">Totale Prenotazioni:</span>
-                  <div className="text-lg font-bold text-blue-900">{vacations.length}</div>
+              <h3 className="font-medium text-blue-900 mb-3 text-base md:text-lg">Statistiche Rapide</h3>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 text-sm">
+                <div className="text-center">
+                  <span className="text-blue-600 font-medium block text-xs md:text-sm">Totale Prenotazioni:</span>
+                  <div className="text-lg md:text-xl font-bold text-blue-900">{vacations.length}</div>
                 </div>
-                <div>
-                  <span className="text-blue-600 font-medium">Giorni Totali:</span>
-                  <div className="text-lg font-bold text-blue-900">
+                <div className="text-center">
+                  <span className="text-blue-600 font-medium block text-xs md:text-sm">Giorni Totali:</span>
+                  <div className="text-lg md:text-xl font-bold text-blue-900">
                     {vacations.reduce((total, vacation) => {
                       return total + calculateDays(vacation.start_date, vacation.end_date)
                     }, 0)}
                   </div>
                 </div>
-                <div>
-                  <span className="text-blue-600 font-medium">Con Descrizione:</span>
-                  <div className="text-lg font-bold text-blue-900">
+                <div className="text-center">
+                  <span className="text-blue-600 font-medium block text-xs md:text-sm">Con Descrizione:</span>
+                  <div className="text-lg md:text-xl font-bold text-blue-900">
                     {vacations.filter((v) => v.notes && v.notes.trim()).length}
                   </div>
                 </div>
-                <div>
-                  <span className="text-blue-600 font-medium">Dipendenti Coinvolti:</span>
-                  <div className="text-lg font-bold text-blue-900">{new Set(vacations.map((v) => v.user_id)).size}</div>
+                <div className="text-center">
+                  <span className="text-blue-600 font-medium block text-xs md:text-sm">Dipendenti Coinvolti:</span>
+                  <div className="text-lg md:text-xl font-bold text-blue-900">
+                    {new Set(vacations.map((v) => v.user_id)).size}
+                  </div>
                 </div>
               </div>
             </div>

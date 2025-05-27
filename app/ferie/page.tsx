@@ -110,8 +110,13 @@ export default function FeriePage() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="space-y-8">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+      <div className="space-y-6 md:space-y-8">
+        {/* Pannello Amministratore - SPOSTATO IN ALTO */}
+        {user && user.role === "admin" && (
+          <AdminPanel vacations={vacations} onVacationDeleted={fetchVacations} onVacationEdited={handleEditVacation} />
+        )}
+
         {/* Calendario pubblico */}
         <VacationCalendar
           vacations={vacations}
@@ -154,13 +159,9 @@ export default function FeriePage() {
           </div>
         )}
 
-        {user && user.role === "admin" && (
-          <AdminPanel vacations={vacations} onVacationDeleted={fetchVacations} onVacationEdited={handleEditVacation} />
-        )}
-
         {/* Lista ferie */}
         {vacations.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-lg shadow p-4 md:p-6">
             <h2 className="text-lg font-semibold mb-4">Ferie Prenotate</h2>
             <div className="space-y-3">
               {vacations.map((vacation) => (
