@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
-import { Calendar, Clock, LogOut, Menu, X, Lock, BarChart3 } from "lucide-react"
+import { Calendar, Clock, LogOut, Menu, X, Lock, BarChart3, LogIn } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ChangePasswordDialog } from "./change-password-dialog"
-import Image from "next/image"
+import { LoginForm } from "./login-form"
 
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -39,6 +39,33 @@ export function Navigation() {
     },
   ]
 
+  const LoginButton = () => {
+    const [showLogin, setShowLogin] = useState(false)
+
+    if (showLogin) {
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md relative">
+            <button
+              onClick={() => setShowLogin(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <LoginForm />
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <Button variant="default" size="sm" onClick={() => setShowLogin(true)}>
+        <LogIn className="h-4 w-4 mr-2" />
+        Accedi
+      </Button>
+    )
+  }
+
   return (
     <TooltipProvider>
       <header className="bg-white shadow-sm border-b">
@@ -47,8 +74,7 @@ export function Navigation() {
             {/* Logo e titolo */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <Image src="/images/entermed-logo.png" alt="Entermed" width={120} height={40} className="h-8 w-auto" />
-                <span className="text-xl font-semibold text-gray-900">Portal</span>
+                <span className="text-xl font-semibold text-gray-900">HD Portal</span>
               </div>
 
               {/* Navigation Desktop */}
@@ -112,7 +138,10 @@ export function Navigation() {
                   </div>
                 </div>
               ) : (
-                <div className="text-sm text-gray-600">Accesso richiesto per interagire</div>
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-gray-600">Accesso richiesto per interagire</div>
+                  <LoginButton />
+                </div>
               )}
 
               {/* Mobile menu button */}

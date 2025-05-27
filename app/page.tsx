@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { WeeklyShiftsCalendar } from "@/components/weekly-shifts-calendar"
-import { LoginForm } from "@/components/login-form"
-import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import type { Shift, ShiftType, User } from "@/types/database"
 
@@ -12,7 +10,6 @@ export default function HomePage() {
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [showLogin, setShowLogin] = useState(false)
   const { user, isLoading: authLoading } = useAuth()
 
   const fetchShifts = async () => {
@@ -184,23 +181,6 @@ export default function HomePage() {
           onEditShift={handleEditShift}
           onDeleteShift={handleDeleteShift}
         />
-
-        {/* Area login */}
-        {!user && (
-          <div className="text-center">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Accesso Richiesto</h2>
-              <p className="text-gray-600">Effettua il login per gestire i turni</p>
-            </div>
-            {!showLogin ? (
-              <Button variant="default" onClick={() => setShowLogin(true)}>
-                Accesso Dipendenti
-              </Button>
-            ) : (
-              <LoginForm />
-            )}
-          </div>
-        )}
 
         {/* Informazioni per utenti non admin */}
         {user && user.role !== "admin" && (
