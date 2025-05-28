@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, Star, ArrowRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, Star, ArrowRight } from "lucide-react"
 import type { Shift, ShiftType, User } from "@/types/database"
 import { cn } from "@/lib/utils"
 import { AddShiftDialog } from "./add-shift-dialog"
@@ -136,10 +136,10 @@ export function WeeklyShiftsCalendar({
   // Funzione per verificare se l'utente può interagire con una data
   const canInteractWithDate = (date: Date) => {
     if (!isLoggedIn || !currentUser) return false
-    
+
     // Gli amministratori possono sempre interagire, anche con i giorni passati
     if (currentUser.role === "admin") return true
-    
+
     // Gli utenti normali possono interagire solo con giorni futuri o oggi
     return !isPast(date)
   }
@@ -223,6 +223,7 @@ export function WeeklyShiftsCalendar({
   // VISTA MOBILE - Lista giornaliera
   if (isMobile) {
     // Funzione per organizzare i turni del giorno secondo l'ordine richiesto
+    // IMPORTANTE: Questo ordinamento si applica a TUTTI i giorni (passati, presenti e futuri)
     const getOrganizedShiftsForDay = (day: Date) => {
       const dayShifts = getShiftsForDay(day)
 
@@ -240,7 +241,8 @@ export function WeeklyShiftsCalendar({
         {} as Record<string, Shift[]>,
       )
 
-      // Organizza secondo l'ordine: Apertura, 2° Turno, doppi turni (IRCAC+altro), Chiusura, Aeroporto
+      // Organizza secondo l'ordine STANDARD per TUTTI i giorni:
+      // 1. Apertura, 2. 2° Turno (senza IRCAC), 3. Doppi turni (IRCAC+altro), 4. Chiusura (senza IRCAC), 5. Aeroporto
       const organizedShifts: Array<{
         type: "single" | "double" | "airport"
         shifts: Shift[]
@@ -425,9 +427,14 @@ export function WeeklyShiftsCalendar({
                     <div>
                       <div className="font-semibold text-lg">
                         {dayNames[index]} {formatDisplayDate(day)}
+                        {isPastDay && (
+                          <Badge variant="outline" className="ml-2 text-xs text-gray-500">
+                            Completato
+                          </Badge>
+                        )}
                         {isPastDay && currentUser?.role === "admin" && (
                           <Badge variant="outline" className="ml-2 text-xs text-orange-600">
-                            Passato
+                            Modificabile
                           </Badge>
                         )}
                       </div>
@@ -441,7 +448,7 @@ export function WeeklyShiftsCalendar({
                         className="h-9"
                       >
                         <Plus className="h-4 w-4 mr-1" />
-                        Aggiungi
+                        {isPastDay ? "Aggiungi (Passato)" : "Aggiungi"}
                       </Button>
                     )}
                   </div>
@@ -603,6 +610,7 @@ export function WeeklyShiftsCalendar({
   // VISTA DESKTOP - Griglia originale (mantenuta invariata per desktop)
   const getGroupedShiftsForDay = (date: Date): GroupedShift[] => {
     const dateString = formatDate(date)
+    // IMPORTANTE: Filtriamo solo i turni non-Aeroporto, ma l'ordinamento è STANDARD per tutti i giorni
     const dayShifts = shifts.filter((shift) => {
       const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
       return shift.date === dateString && shiftType?.name !== "Aeroporto"
@@ -621,6 +629,8 @@ export function WeeklyShiftsCalendar({
       {} as Record<string, Shift[]>,
     )
 
+    // Ordinamento STANDARD per TUTTI i giorni (passati, presenti, futuri):
+    // 1. Apertura, 2. 2° Turno, 3. IRCAC, 4. Chiusura
     const typeOrder = ["Apertura", "2° Turno", "IRCAC", "Chiusura"]
     const orderedShifts: Shift[] = []
 
@@ -630,6 +640,7 @@ export function WeeklyShiftsCalendar({
       }
     })
 
+    // Aggiungi altri tipi di turno non standard alla fine
     Object.keys(shiftsByType).forEach((typeName) => {
       if (!typeOrder.includes(typeName)) {
         orderedShifts.push(...shiftsByType[typeName])
@@ -705,6 +716,7 @@ export function WeeklyShiftsCalendar({
 
   const getAirportShiftsForDay = (date: Date): Shift[] => {
     const dateString = formatDate(date)
+    // Turni Aeroporto: sempre alla fine, per TUTTI i giorni
     return shifts.filter((shift) => {
       const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
       return shift.date === dateString && shiftType?.name === "Aeroporto"
