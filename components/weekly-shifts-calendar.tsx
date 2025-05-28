@@ -428,12 +428,12 @@ export function WeeklyShiftsCalendar({
                       <div className="font-semibold text-lg">
                         {dayNames[index]} {formatDisplayDate(day)}
                         {isPastDay && (
-                          <Badge variant="outline" className="ml-2 text-xs text-blue-600 border-blue-200 bg-blue-50">
+                          <Badge variant="outline" className="ml-2 text-xs text-gray-600 border-gray-300 bg-gray-100">
                             Completato
                           </Badge>
                         )}
                         {isPastDay && currentUser?.role === "admin" && (
-                          <Badge variant="outline" className="ml-2 text-xs text-blue-600 border-blue-200 bg-blue-50">
+                          <Badge variant="outline" className="ml-2 text-xs text-gray-600 border-gray-300 bg-gray-100">
                             Modificabile
                           </Badge>
                         )}
@@ -902,7 +902,7 @@ export function WeeklyShiftsCalendar({
                       {formatDisplayDate(day)}
                     </div>
                     {isPastDay && currentUser?.role === "admin" && (
-                      <Badge variant="outline" className="text-xs text-blue-600 mt-1 border-blue-200 bg-blue-50">
+                      <Badge variant="outline" className="text-xs text-gray-600 mt-1 border-gray-300 bg-gray-100">
                         Passato
                       </Badge>
                     )}
@@ -961,7 +961,7 @@ export function WeeklyShiftsCalendar({
                     <div className="font-medium text-xs text-gray-600">{dayNamesShort[index]}</div>
                     <div className="text-xs md:text-sm font-bold text-gray-500">{formatDisplayDate(day)}</div>
                     {isPastDay && currentUser?.role === "admin" && (
-                      <Badge variant="outline" className="text-xs text-orange-600 mt-1">
+                      <Badge variant="outline" className="text-xs text-gray-600 mt-1 border-gray-300 bg-gray-100">
                         Passato
                       </Badge>
                     )}
