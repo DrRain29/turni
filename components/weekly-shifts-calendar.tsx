@@ -428,29 +428,22 @@ export function WeeklyShiftsCalendar({
                       <div className="font-semibold text-lg">
                         {dayNames[index]} {formatDisplayDate(day)}
                         {isPastDay && (
-                          <Badge variant="outline" className="ml-2 text-xs text-gray-500">
+                          <Badge variant="outline" className="ml-2 text-xs text-blue-600 border-blue-200 bg-blue-50">
                             Completato
                           </Badge>
                         )}
                         {isPastDay && currentUser?.role === "admin" && (
-                          <Badge variant="outline" className="ml-2 text-xs text-orange-600">
+                          <Badge variant="outline" className="ml-2 text-xs text-blue-600 border-blue-200 bg-blue-50">
                             Modificabile
                           </Badge>
                         )}
                       </div>
                       <div className="text-sm text-gray-500">{organizedShifts.length} turni</div>
                     </div>
-                    {canInteract && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAddShift(formatDate(day))}
-                        className="h-9"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        {isPastDay ? "Aggiungi (Passato)" : "Aggiungi"}
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" onClick={() => handleAddShift(formatDate(day))} className="h-9">
+                      <Plus className="h-4 w-4 mr-1" />
+                      {isPastDay ? "Aggiungi (Passato)" : "Aggiungi"}
+                    </Button>
                   </div>
 
                   {/* Turni del giorno organizzati */}
@@ -610,47 +603,15 @@ export function WeeklyShiftsCalendar({
   // VISTA DESKTOP - Griglia originale (mantenuta invariata per desktop)
   const getGroupedShiftsForDay = (date: Date): GroupedShift[] => {
     const dateString = formatDate(date)
-    // IMPORTANTE: Filtriamo solo i turni non-Aeroporto, ma l'ordinamento è STANDARD per tutti i giorni
     const dayShifts = shifts.filter((shift) => {
       const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
       return shift.date === dateString && shiftType?.name !== "Aeroporto"
     })
 
-    const shiftsByType = dayShifts.reduce(
-      (groups, shift) => {
-        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
-        const typeName = shiftType?.name || "Altri"
-        if (!groups[typeName]) {
-          groups[typeName] = []
-        }
-        groups[typeName].push(shift)
-        return groups
-      },
-      {} as Record<string, Shift[]>,
-    )
-
-    // Ordinamento STANDARD per TUTTI i giorni (passati, presenti, futuri):
-    // 1. Apertura, 2. 2° Turno, 3. IRCAC, 4. Chiusura
-    const typeOrder = ["Apertura", "2° Turno", "IRCAC", "Chiusura"]
-    const orderedShifts: Shift[] = []
-
-    typeOrder.forEach((typeName) => {
-      if (shiftsByType[typeName]) {
-        orderedShifts.push(...shiftsByType[typeName])
-      }
-    })
-
-    // Aggiungi altri tipi di turno non standard alla fine
-    Object.keys(shiftsByType).forEach((typeName) => {
-      if (!typeOrder.includes(typeName)) {
-        orderedShifts.push(...shiftsByType[typeName])
-      }
-    })
-
+    // Raggruppa per utente PRIMA di ordinare per tipo
     const userGroups: Record<string, { user_id: string; user_name: string; shifts: Shift[] }> = {}
-    const userOrder: string[] = []
 
-    orderedShifts.forEach((shift) => {
+    dayShifts.forEach((shift) => {
       const userId = shift.user_id
       if (!userGroups[userId]) {
         userGroups[userId] = {
@@ -658,13 +619,56 @@ export function WeeklyShiftsCalendar({
           user_name: shift.users?.name || "Sconosciuto",
           shifts: [],
         }
-        userOrder.push(userId)
       }
       userGroups[userId].shifts.push(shift)
     })
 
-    const groupedShifts: GroupedShift[] = userOrder.map((userId, index) => {
-      const group = userGroups[userId]
+    // Ordina gli utenti secondo la logica: Apertura, 2° Turno (senza IRCAC), Doppi turni (IRCAC+altro), Chiusura (senza IRCAC)
+    const orderedUsers: Array<{ user_id: string; user_name: string; shifts: Shift[]; priority: number }> = []
+
+    Object.values(userGroups).forEach((group) => {
+      const hasApertura = group.shifts.some((shift) => {
+        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+        return shiftType?.name === "Apertura"
+      })
+
+      const hasIRCAC = group.shifts.some((shift) => {
+        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+        return shiftType?.name === "IRCAC"
+      })
+
+      const hasSecondoTurno = group.shifts.some((shift) => {
+        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+        return shiftType?.name === "2° Turno"
+      })
+
+      const hasChiusura = group.shifts.some((shift) => {
+        const shiftType = shiftTypes.find((st) => st.id === shift.shift_type_id)
+        return shiftType?.name === "Chiusura"
+      })
+
+      let priority = 999
+
+      if (hasApertura) {
+        priority = 1 // Apertura sempre prima
+      } else if (hasSecondoTurno && !hasIRCAC) {
+        priority = 2 // 2° Turno senza IRCAC
+      } else if (hasIRCAC) {
+        priority = 3 // Doppi turni (IRCAC + altro)
+      } else if (hasChiusura && !hasIRCAC) {
+        priority = 4 // Chiusura senza IRCAC
+      }
+
+      orderedUsers.push({
+        ...group,
+        priority,
+      })
+    })
+
+    // Ordina per priorità
+    orderedUsers.sort((a, b) => a.priority - b.priority)
+
+    const groupedShifts: GroupedShift[] = orderedUsers.map((group, index) => {
       const totalHours = group.shifts.reduce((total, shift) => {
         return total + calculateShiftHours(shift.start_time, shift.end_time)
       }, 0)
@@ -898,7 +902,7 @@ export function WeeklyShiftsCalendar({
                       {formatDisplayDate(day)}
                     </div>
                     {isPastDay && currentUser?.role === "admin" && (
-                      <Badge variant="outline" className="text-xs text-orange-600 mt-1">
+                      <Badge variant="outline" className="text-xs text-blue-600 mt-1 border-blue-200 bg-blue-50">
                         Passato
                       </Badge>
                     )}
