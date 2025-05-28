@@ -5,6 +5,8 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json() // 'email' ora contiene l'username
 
+    console.log("🔍 Login attempt:", { username: email, password: "***" })
+
     const supabase = createServerClient()
 
     // Mappa username alle email esistenti nel database
@@ -18,6 +20,7 @@ export async function POST(request: NextRequest) {
 
     // Ottieni l'email dal mapping username
     const actualEmail = usernameToEmailMap[email] || email
+    console.log("📧 Email mapping:", { username: email, actualEmail })
 
     // Cerca l'utente nel database usando l'email mappata
     const { data: user, error } = await supabase
@@ -26,7 +29,10 @@ export async function POST(request: NextRequest) {
       .eq("email", actualEmail)
       .single()
 
+    console.log("👤 Database query result:", { user: user ? "found" : "not found", error })
+
     if (error || !user) {
+      console.log("❌ User not found in database")
       return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
 
@@ -55,9 +61,14 @@ export async function POST(request: NextRequest) {
         isValidPassword = false
     }
 
+    console.log("🔐 Password validation:", { username: email, isValid: isValidPassword })
+
     if (!isValidPassword) {
+      console.log("❌ Invalid password")
       return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
+
+    console.log("✅ Login successful for:", user.name)
 
     // Restituisce i dati dell'utente incluso il ruolo (senza password)
     const { password_hash, ...userWithoutPassword } = user
