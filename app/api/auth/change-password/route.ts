@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
       pedonev: "vpedone@entermed.it",
       terranap: "pterrana@entermed.it",
       fazioc: "cfazio@entermed.it",
-      geracig: "ggeraci@entermed.it", // Aggiunto Geraci
+      geracig: "ggeraci@entermed.it",
+      pipitones: "spipitone@entermed.it", // Nuovo utente aggiunto
     }
 
     // Ottieni l'username dall'email dell'utente
@@ -42,7 +43,8 @@ export async function POST(request: NextRequest) {
       "vpedone@entermed.it": "pedonev",
       "pterrana@entermed.it": "terranap",
       "cfazio@entermed.it": "fazioc",
-      "ggeraci@entermed.it": "geracig", // Aggiornato Geraci
+      "ggeraci@entermed.it": "geracig",
+      "spipitone@entermed.it": "pipitones", // Nuovo utente aggiunto
     }
 
     const username = emailToUsernameMap[user.email] || user.email
@@ -58,6 +60,9 @@ export async function POST(request: NextRequest) {
         isCurrentPasswordValid = current_password === "@Silvia123"
         break
       case "geracig":
+        isCurrentPasswordValid = current_password === "Entermed$01"
+        break
+      case "pipitones":
         isCurrentPasswordValid = current_password === "Entermed$01"
         break
       default:

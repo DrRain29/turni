@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, Star, ArrowRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, Star, ArrowRight } from 'lucide-react'
 import type { Shift, ShiftType, User } from "@/types/database"
 import { cn } from "@/lib/utils"
 import { AddShiftDialog } from "./add-shift-dialog"
@@ -133,6 +133,17 @@ export function WeeklyShiftsCalendar({
     return dateString < todayString
   }
 
+  // Funzione per verificare se l'utente può interagire con una data
+  const canInteractWithDate = (date: Date) => {
+    if (!isLoggedIn || !currentUser) return false
+    
+    // Gli amministratori possono sempre interagire, anche con i giorni passati
+    if (currentUser.role === "admin") return true
+    
+    // Gli utenti normali possono interagire solo con giorni futuri o oggi
+    return !isPast(date)
+  }
+
   const getWeekRange = () => {
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekStart.getDate() + 6)
@@ -199,11 +210,13 @@ export function WeeklyShiftsCalendar({
 
   const canEditShift = (shift: Shift) => {
     if (!currentUser) return false
+    // Gli admin possono sempre modificare, gli utenti solo i propri turni
     return currentUser.role === "admin" || shift.user_id === currentUser.id
   }
 
   const canDeleteShift = (shift: Shift) => {
     if (!currentUser) return false
+    // Gli admin possono sempre eliminare, gli utenti solo i propri turni
     return currentUser.role === "admin" || shift.user_id === currentUser.id
   }
 
@@ -396,6 +409,7 @@ export function WeeklyShiftsCalendar({
               const organizedShifts = getOrganizedShiftsForDay(day)
               const isCurrentDay = isToday(day)
               const isPastDay = isPast(day)
+              const canInteract = canInteractWithDate(day)
 
               return (
                 <div
@@ -411,10 +425,15 @@ export function WeeklyShiftsCalendar({
                     <div>
                       <div className="font-semibold text-lg">
                         {dayNames[index]} {formatDisplayDate(day)}
+                        {isPastDay && currentUser?.role === "admin" && (
+                          <Badge variant="outline" className="ml-2 text-xs text-orange-600">
+                            Passato
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-sm text-gray-500">{organizedShifts.length} turni</div>
                     </div>
-                    {isLoggedIn && currentUser && !isPastDay && (
+                    {canInteract && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -694,7 +713,6 @@ export function WeeklyShiftsCalendar({
 
   const renderShiftGroup = (group: GroupedShift, date: Date) => {
     const isPastDay = isPast(date)
-    const canInteract = isLoggedIn && currentUser && !isPastDay
 
     return (
       <div
@@ -845,6 +863,7 @@ export function WeeklyShiftsCalendar({
               const groupedShifts = getGroupedShiftsForDay(day)
               const isCurrentDay = isToday(day)
               const isPastDay = isPast(day)
+              const canInteract = canInteractWithDate(day)
 
               return (
                 <div
@@ -866,12 +885,17 @@ export function WeeklyShiftsCalendar({
                     >
                       {formatDisplayDate(day)}
                     </div>
+                    {isPastDay && currentUser?.role === "admin" && (
+                      <Badge variant="outline" className="text-xs text-orange-600 mt-1">
+                        Passato
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="space-y-1 md:space-y-2">
                     {groupedShifts.map((group) => renderShiftGroup(group, day))}
 
-                    {isLoggedIn && currentUser && !isPastDay && (
+                    {canInteract && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -880,7 +904,7 @@ export function WeeklyShiftsCalendar({
                       >
                         <Plus className="h-2 w-2 md:h-3 md:w-3 mr-1" />
                         <span className="hidden md:inline">
-                          {currentUser.role === "admin" ? "Aggiungi" : "Mio Turno"}
+                          {currentUser?.role === "admin" ? "Aggiungi" : "Mio Turno"}
                         </span>
                         <span className="md:hidden">+</span>
                       </Button>
@@ -906,6 +930,7 @@ export function WeeklyShiftsCalendar({
               const airportShifts = getAirportShiftsForDay(day)
               const isCurrentDay = isToday(day)
               const isPastDay = isPast(day)
+              const canInteract = canInteractWithDate(day)
 
               return (
                 <div
@@ -919,6 +944,11 @@ export function WeeklyShiftsCalendar({
                   <div className="text-center mb-1 md:mb-2 pb-1 border-b border-gray-200">
                     <div className="font-medium text-xs text-gray-600">{dayNamesShort[index]}</div>
                     <div className="text-xs md:text-sm font-bold text-gray-500">{formatDisplayDate(day)}</div>
+                    {isPastDay && currentUser?.role === "admin" && (
+                      <Badge variant="outline" className="text-xs text-orange-600 mt-1">
+                        Passato
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -984,7 +1014,7 @@ export function WeeklyShiftsCalendar({
                       )
                     })}
 
-                    {isLoggedIn && currentUser && !isPastDay && (
+                    {canInteract && (
                       <Button
                         variant="outline"
                         size="sm"

@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
       pedonev: "vpedone@entermed.it",
       terranap: "pterrana@entermed.it",
       fazioc: "cfazio@entermed.it",
-      geracig: "ggeraci@entermed.it", // Aggiunto Geraci
+      geracig: "ggeraci@entermed.it",
+      pipitones: "spipitone@entermed.it", // Nuovo utente aggiunto
     }
 
     // Ottieni l'email dal mapping username
@@ -45,6 +46,9 @@ export async function POST(request: NextRequest) {
         isValidPassword = password === "@Silvia123"
         break
       case "geracig":
+        isValidPassword = password === "Entermed$01"
+        break
+      case "pipitones":
         isValidPassword = password === "Entermed$01"
         break
       default:
