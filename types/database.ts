@@ -2,6 +2,7 @@ export interface User {
   id: string
   email: string
   name: string
+  username?: string
   password_hash: string
   created_at: string
   role: "user" | "admin"

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
-import { Calendar, Clock, LogOut, Menu, X, Lock, BarChart3, LogIn } from "lucide-react"
+import { Calendar, Clock, LogOut, Menu, X, Lock, BarChart3, LogIn, Shield } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -36,6 +36,13 @@ export function Navigation() {
       href: "/statistiche",
       icon: BarChart3,
       description: "Report ore dipendenti",
+    },
+    {
+      name: "Admin",
+      href: "/admin",
+      icon: Shield,
+      description: "Pannello amministratore",
+      adminOnly: true, // Aggiungi questa proprietà
     },
   ]
 
@@ -79,24 +86,26 @@ export function Navigation() {
 
               {/* Navigation Desktop */}
               <nav className="hidden md:flex items-center gap-1">
-                {navigationItems.map((item) => {
-                  const Icon = item.icon
-                  const isActive = pathname === item.href
-                  return (
-                    <Link key={item.href} href={item.href}>
-                      <Button
-                        variant={isActive ? "default" : "ghost"}
-                        size="sm"
-                        className={cn("flex items-center gap-2", {
-                          "bg-blue-600 text-white": isActive,
-                        })}
-                      >
-                        <Icon className="h-4 w-4" />
-                        {item.name}
-                      </Button>
-                    </Link>
-                  )
-                })}
+                {navigationItems
+                  .filter((item) => !item.adminOnly || user?.role === "admin")
+                  .map((item) => {
+                    const Icon = item.icon
+                    const isActive = pathname === item.href
+                    return (
+                      <Link key={item.href} href={item.href}>
+                        <Button
+                          variant={isActive ? "default" : "ghost"}
+                          size="sm"
+                          className={cn("flex items-center gap-2", {
+                            "bg-blue-600 text-white": isActive,
+                          })}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {item.name}
+                        </Button>
+                      </Link>
+                    )
+                  })}
               </nav>
             </div>
 
@@ -160,28 +169,30 @@ export function Navigation() {
           {isMobileMenuOpen && (
             <div className="md:hidden border-t bg-gray-50 py-4">
               <nav className="space-y-2">
-                {navigationItems.map((item) => {
-                  const Icon = item.icon
-                  const isActive = pathname === item.href
-                  return (
-                    <Link key={item.href} href={item.href}>
-                      <Button
-                        variant={isActive ? "default" : "ghost"}
-                        size="sm"
-                        className={cn("w-full justify-start gap-2", {
-                          "bg-blue-600 text-white": isActive,
-                        })}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        <Icon className="h-4 w-4" />
-                        <div className="text-left">
-                          <div>{item.name}</div>
-                          <div className="text-xs opacity-70">{item.description}</div>
-                        </div>
-                      </Button>
-                    </Link>
-                  )
-                })}
+                {navigationItems
+                  .filter((item) => !item.adminOnly || user?.role === "admin")
+                  .map((item) => {
+                    const Icon = item.icon
+                    const isActive = pathname === item.href
+                    return (
+                      <Link key={item.href} href={item.href}>
+                        <Button
+                          variant={isActive ? "default" : "ghost"}
+                          size="sm"
+                          className={cn("w-full justify-start gap-2", {
+                            "bg-blue-600 text-white": isActive,
+                          })}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <div className="text-left">
+                            <div>{item.name}</div>
+                            <div className="text-xs opacity-70">{item.description}</div>
+                          </div>
+                        </Button>
+                      </Link>
+                    )
+                  })}
               </nav>
 
               {user && (
