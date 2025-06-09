@@ -1,37 +1,12 @@
 import { NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
 
-// Funzione per verificare se l'utente è admin
-async function isAdmin(request: Request) {
-  try {
-    // Estrai l'ID utente e il ruolo dalla sessione o dal token
-    // Questo è un esempio, dovresti adattarlo al tuo sistema di autenticazione
-    const authHeader = request.headers.get("authorization")
-    if (!authHeader) {
-      return false
-    }
-
-    // Implementa la tua logica di verifica qui
-    // Per ora, assumiamo che l'utente sia admin se ha un header valido
-    return true
-  } catch (error) {
-    console.error("Error verifying admin:", error)
-    return false
-  }
-}
-
 // GET - Ottieni tutti gli utenti
 export async function GET(request: Request) {
   try {
-    // Verifica che l'utente sia admin
-    // const isUserAdmin = await isAdmin(request)
-    // if (!isUserAdmin) {
-    //   return NextResponse.json({ error: "Non autorizzato" }, { status: 403 })
-    // }
-
     const supabase = createServerClient()
 
-    // Rimuovi username dalla query per ora
+    // Ottieni tutti gli utenti
     const { data: users, error } = await supabase
       .from("users")
       .select("id, name, email, role, created_at")
@@ -52,17 +27,11 @@ export async function GET(request: Request) {
 // POST - Crea un nuovo utente
 export async function POST(request: Request) {
   try {
-    // Verifica che l'utente sia admin
-    // const isUserAdmin = await isAdmin(request)
-    // if (!isUserAdmin) {
-    //   return NextResponse.json({ error: "Non autorizzato" }, { status: 403 })
-    // }
-
-    const { name, email, password, role } = await request.json()
+    const { name, email, username, password, role } = await request.json()
 
     // Validazione
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: "Nome, email e password sono obbligatori" }, { status: 400 })
+    if (!name || !email || !password || !username) {
+      return NextResponse.json({ error: "Nome, email, username e password sono obbligatori" }, { status: 400 })
     }
 
     if (password.length < 6) {
@@ -91,7 +60,7 @@ export async function POST(request: Request) {
     // In produzione, usa bcrypt o un altro algoritmo di hashing
     const password_hash = password // In produzione: await bcrypt.hash(password, 10)
 
-    // Crea il nuovo utente (senza username per ora)
+    // Crea il nuovo utente
     const { data, error } = await supabase
       .from("users")
       .insert({
@@ -105,6 +74,26 @@ export async function POST(request: Request) {
     if (error) {
       console.error("Error creating user:", error)
       return NextResponse.json({ error: "Errore nella creazione dell'utente" }, { status: 500 })
+    }
+
+    // Aggiorna il file di mappatura username-email
+    // Questo è un approccio temporaneo, in produzione dovresti usare un database
+    try {
+      // Ottieni il file di mappatura attuale
+      const response = await fetch("/api/admin/update-username-mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          email,
+        }),
+      })
+
+      if (!response.ok) {
+        console.error("Error updating username mapping")
+      }
+    } catch (mappingError) {
+      console.error("Error updating username mapping:", mappingError)
     }
 
     return NextResponse.json(data[0])

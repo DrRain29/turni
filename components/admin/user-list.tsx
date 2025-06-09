@@ -49,6 +49,21 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
     )
   }
 
+  // Mappa username alle email esistenti nel database
+  const usernameToEmailMap: Record<string, string> = {
+    pedonev: "vpedone@entermed.it",
+    terranap: "pterrana@entermed.it",
+    fazioc: "cfazio@entermed.it",
+    geracig: "ggeraci@entermed.it",
+    pipitones: "spipitone@entermed.it",
+  }
+
+  // Inverti la mappatura per ottenere email -> username
+  const emailToUsernameMap: Record<string, string> = {}
+  Object.entries(usernameToEmailMap).forEach(([username, email]) => {
+    emailToUsernameMap[email] = username
+  })
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -56,8 +71,8 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
           <TableRow>
             <TableHead className="w-[250px]">Nome</TableHead>
             <TableHead>Email</TableHead>
+            <TableHead>Username per Login</TableHead>
             <TableHead>Ruolo</TableHead>
-            <TableHead>Data Creazione</TableHead>
             <TableHead className="text-right">Azioni</TableHead>
           </TableRow>
         </TableHeader>
@@ -66,6 +81,9 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
             <TableRow key={user.id}>
               <TableCell className="font-medium">{user.name}</TableCell>
               <TableCell>{user.email}</TableCell>
+              <TableCell>
+                {emailToUsernameMap[user.email] || <span className="text-gray-400 italic">Usa email per login</span>}
+              </TableCell>
               <TableCell>
                 {user.role === "admin" ? (
                   <Badge variant="destructive" className="flex items-center w-fit gap-1">
@@ -78,13 +96,6 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                     Utente
                   </Badge>
                 )}
-              </TableCell>
-              <TableCell>
-                {new Date(user.created_at).toLocaleDateString("it-IT", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>

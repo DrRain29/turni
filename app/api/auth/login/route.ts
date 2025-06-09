@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       pipitones: "spipitone@entermed.it", // Nuovo utente aggiunto
     }
 
-    // Ottieni l'email dal mapping username
+    // Ottieni l'email dal mapping username o usa direttamente l'input come email
     const actualEmail = usernameToEmailMap[email] || email
     console.log("📧 Email mapping:", { username: email, actualEmail })
 
@@ -36,12 +36,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
 
-    // Verifica la password usando l'username inserito
+    // Verifica la password usando l'username inserito o direttamente la password nel database
     let isValidPassword = false
 
-    switch (
-      email // 'email' contiene l'username inserito
-    ) {
+    // Prima controlla le password hardcoded per gli utenti esistenti
+    switch (email) {
       case "pedonev":
         isValidPassword = password === "@Vincenzo29"
         break
@@ -58,7 +57,8 @@ export async function POST(request: NextRequest) {
         isValidPassword = password === "Entermed$01"
         break
       default:
-        isValidPassword = false
+        // Per i nuovi utenti, verifica la password nel database
+        isValidPassword = password === user.password_hash
     }
 
     console.log("🔐 Password validation:", { username: email, isValid: isValidPassword })
