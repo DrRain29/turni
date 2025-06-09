@@ -17,7 +17,6 @@ interface CreateUserFormProps {
 export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
-  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState("user")
   const [isLoading, setIsLoading] = useState(false)
@@ -47,7 +46,6 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
         body: JSON.stringify({
           name,
           email,
-          username: username || undefined, // Se vuoto, non inviare
           password,
           role,
         }),
@@ -61,7 +59,6 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
       setSuccess("Utente creato con successo!")
       setName("")
       setEmail("")
-      setUsername("")
       setPassword("")
       setRole("user")
 
@@ -114,12 +111,7 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
             placeholder="email@esempio.com"
             required
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="username">Username (opzionale)</Label>
-          <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username" />
-          <p className="text-xs text-gray-500">Se non specificato, verrà usata l'email per l'accesso</p>
+          <p className="text-xs text-gray-500">L'email verrà usata come username per l'accesso</p>
         </div>
 
         <div className="space-y-2">

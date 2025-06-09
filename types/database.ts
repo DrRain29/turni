@@ -2,7 +2,7 @@ export interface User {
   id: string
   email: string
   name: string
-  username?: string
+  username?: string // Make this optional since it doesn't exist in the database yet
   password_hash: string
   created_at: string
   role: "user" | "admin"

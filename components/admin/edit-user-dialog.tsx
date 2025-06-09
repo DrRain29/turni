@@ -29,7 +29,6 @@ interface EditUserDialogProps {
 export function EditUserDialog({ isOpen, user, onClose, onUserUpdated }: EditUserDialogProps) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
-  const [username, setUsername] = useState("")
   const [role, setRole] = useState("user")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -38,7 +37,6 @@ export function EditUserDialog({ isOpen, user, onClose, onUserUpdated }: EditUse
     if (user) {
       setName(user.name || "")
       setEmail(user.email || "")
-      setUsername(user.username || "")
       setRole(user.role || "user")
       setError("")
     }
@@ -63,7 +61,6 @@ export function EditUserDialog({ isOpen, user, onClose, onUserUpdated }: EditUse
         body: JSON.stringify({
           name,
           email,
-          username: username || undefined, // Se vuoto, non inviare
           role,
         }),
       })
@@ -121,17 +118,7 @@ export function EditUserDialog({ isOpen, user, onClose, onUserUpdated }: EditUse
               placeholder="email@esempio.com"
               required
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-username">Username (opzionale)</Label>
-            <Input
-              id="edit-username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="username"
-            />
-            <p className="text-xs text-gray-500">Se non specificato, verrà usata l'email per l'accesso</p>
+            <p className="text-xs text-gray-500">L'email viene usata come username per l'accesso</p>
           </div>
 
           <div className="space-y-2">

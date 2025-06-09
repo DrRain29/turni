@@ -8,7 +8,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, name, email, username, role, created_at")
+      .select("id, name, email, role, created_at")
       .eq("id", params.id)
       .single()
 
@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 // PUT - Aggiorna un utente
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { name, email, username, role } = await request.json()
+    const { name, email, role } = await request.json()
 
     // Validazione
     if (!name || !email) {
@@ -63,35 +63,16 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Email già in uso da un altro utente" }, { status: 400 })
     }
 
-    // Verifica se lo username è già in uso (se fornito)
-    if (username) {
-      const { data: usernameUser, error: usernameError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("username", username)
-        .neq("id", params.id) // Escludi l'utente corrente
-        .maybeSingle()
-
-      if (usernameError) {
-        return NextResponse.json({ error: "Errore nella verifica dello username" }, { status: 500 })
-      }
-
-      if (usernameUser) {
-        return NextResponse.json({ error: "Username già in uso da un altro utente" }, { status: 400 })
-      }
-    }
-
-    // Aggiorna l'utente
+    // Aggiorna l'utente (senza username per ora)
     const { data, error } = await supabase
       .from("users")
       .update({
         name,
         email,
-        username: username || null, // Se non fornito, usa null
         role: role || "user", // Default a "user" se non specificato
       })
       .eq("id", params.id)
-      .select("id, name, email, username, role, created_at")
+      .select("id, name, email, role, created_at")
 
     if (error) {
       console.error("Error updating user:", error)

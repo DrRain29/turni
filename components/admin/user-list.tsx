@@ -56,8 +56,8 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
           <TableRow>
             <TableHead className="w-[250px]">Nome</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Username</TableHead>
             <TableHead>Ruolo</TableHead>
+            <TableHead>Data Creazione</TableHead>
             <TableHead className="text-right">Azioni</TableHead>
           </TableRow>
         </TableHeader>
@@ -66,7 +66,6 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
             <TableRow key={user.id}>
               <TableCell className="font-medium">{user.name}</TableCell>
               <TableCell>{user.email}</TableCell>
-              <TableCell>{user.username || <span className="text-gray-400 italic">Non impostato</span>}</TableCell>
               <TableCell>
                 {user.role === "admin" ? (
                   <Badge variant="destructive" className="flex items-center w-fit gap-1">
@@ -79,6 +78,13 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                     Utente
                   </Badge>
                 )}
+              </TableCell>
+              <TableCell>
+                {new Date(user.created_at).toLocaleDateString("it-IT", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
