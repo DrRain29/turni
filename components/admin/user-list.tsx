@@ -49,20 +49,25 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
     )
   }
 
-  // Mappa username alle email esistenti nel database
-  const usernameToEmailMap: Record<string, string> = {
-    pedonev: "vpedone@entermed.it",
-    terranap: "pterrana@entermed.it",
-    fazioc: "cfazio@entermed.it",
-    geracig: "ggeraci@entermed.it",
-    pipitones: "spipitone@entermed.it",
-  }
+  // Utenti legacy con username specifici
+  const legacyUsers = [
+    "vpedone@entermed.it",
+    "pterrana@entermed.it",
+    "cfazio@entermed.it",
+    "ggeraci@entermed.it",
+    "spipitone@entermed.it",
+  ]
 
-  // Inverti la mappatura per ottenere email -> username
-  const emailToUsernameMap: Record<string, string> = {}
-  Object.entries(usernameToEmailMap).forEach(([username, email]) => {
-    emailToUsernameMap[email] = username
-  })
+  const getLegacyUsername = (email: string): string | null => {
+    const emailToUsernameMap: Record<string, string> = {
+      "vpedone@entermed.it": "pedonev",
+      "pterrana@entermed.it": "terranap",
+      "cfazio@entermed.it": "fazioc",
+      "ggeraci@entermed.it": "geracig",
+      "spipitone@entermed.it": "pipitones",
+    }
+    return emailToUsernameMap[email] || null
+  }
 
   return (
     <div className="overflow-x-auto">
@@ -77,61 +82,78 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.name}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>
-                {emailToUsernameMap[user.email] || <span className="text-gray-400 italic">Usa email per login</span>}
-              </TableCell>
-              <TableCell>
-                {user.role === "admin" ? (
-                  <Badge variant="destructive" className="flex items-center w-fit gap-1">
-                    <Shield className="h-3 w-3" />
-                    Admin
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="flex items-center w-fit gap-1">
-                    <UserIcon className="h-3 w-3" />
-                    Utente
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <span className="sr-only">Apri menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Azioni</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onEdit(user)} className="flex items-center gap-2 cursor-pointer">
-                      <Edit className="h-4 w-4" />
-                      Modifica
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onChangePassword(user)}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <Key className="h-4 w-4" />
-                      Cambia Password
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => onDelete(user)}
-                      className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Elimina
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
+          {users.map((user) => {
+            const legacyUsername = getLegacyUsername(user.email)
+            const isLegacyUser = legacyUsers.includes(user.email)
+
+            return (
+              <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.name}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>
+                  {isLegacyUser ? (
+                    <div className="space-y-1">
+                      <Badge variant="outline" className="text-xs">
+                        {legacyUsername}
+                      </Badge>
+                      <div className="text-xs text-gray-500">Username legacy</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <span className="text-sm">{user.email}</span>
+                      <div className="text-xs text-gray-500">Usa email per login</div>
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {user.role === "admin" ? (
+                    <Badge variant="destructive" className="flex items-center w-fit gap-1">
+                      <Shield className="h-3 w-3" />
+                      Admin
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="flex items-center w-fit gap-1">
+                      <UserIcon className="h-3 w-3" />
+                      Utente
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <span className="sr-only">Apri menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Azioni</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onEdit(user)} className="flex items-center gap-2 cursor-pointer">
+                        <Edit className="h-4 w-4" />
+                        Modifica
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onChangePassword(user)}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <Key className="h-4 w-4" />
+                        Cambia Password
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onDelete(user)}
+                        className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Elimina
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>

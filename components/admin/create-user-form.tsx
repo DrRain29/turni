@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { UserPlus, AlertCircle, Check } from "lucide-react"
+import { UserPlus, AlertCircle, Check, Info } from "lucide-react"
 
 interface CreateUserFormProps {
   onUserCreated: () => void
@@ -17,7 +17,6 @@ interface CreateUserFormProps {
 export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
-  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState("user")
   const [isLoading, setIsLoading] = useState(false)
@@ -29,8 +28,8 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
     setError("")
     setSuccess("")
 
-    if (!name || !email || !password || !username) {
-      setError("Nome, email, username e password sono campi obbligatori")
+    if (!name || !email || !password) {
+      setError("Nome, email e password sono campi obbligatori")
       return
     }
 
@@ -47,7 +46,6 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
         body: JSON.stringify({
           name,
           email,
-          username,
           password,
           role,
         }),
@@ -58,17 +56,16 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
         throw new Error(data.error || "Errore nella creazione dell'utente")
       }
 
-      setSuccess("Utente creato con successo!")
+      setSuccess(`Utente creato con successo! L'utente potrà accedere usando l'email "${email}" come username.`)
       setName("")
       setEmail("")
-      setUsername("")
       setPassword("")
       setRole("user")
 
       // Notifica il componente padre
       setTimeout(() => {
         onUserCreated()
-      }, 1500)
+      }, 2500)
     } catch (error: any) {
       setError(error.message || "Si è verificato un errore")
     } finally {
@@ -92,6 +89,13 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
         </Alert>
       )}
 
+      <Alert className="bg-blue-50 text-blue-800 border-blue-200">
+        <Info className="h-4 w-4 text-blue-600" />
+        <AlertDescription>
+          <strong>Importante:</strong> L'email inserita verrà utilizzata come username per l'accesso al sistema.
+        </AlertDescription>
+      </Alert>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="name">Nome Completo *</Label>
@@ -105,7 +109,7 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email *</Label>
+          <Label htmlFor="email">Email / Username *</Label>
           <Input
             id="email"
             type="email"
@@ -114,18 +118,7 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
             placeholder="email@esempio.com"
             required
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="username">Username per login *</Label>
-          <Input
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="username"
-            required
-          />
-          <p className="text-xs text-gray-500">Questo username verrà utilizzato per l'accesso</p>
+          <p className="text-xs text-gray-500">Questa email sarà utilizzata come username per l'accesso</p>
         </div>
 
         <div className="space-y-2">

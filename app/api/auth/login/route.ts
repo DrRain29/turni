@@ -3,26 +3,43 @@ import { createServerClient } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json() // 'email' ora contiene l'username
+    const { email, password } = await request.json() // 'email' contiene l'username/email inserito
 
     console.log("🔍 Login attempt:", { username: email, password: "***" })
 
     const supabase = createServerClient()
 
-    // Mappa username alle email esistenti nel database
+    // Mappa username alle email esistenti nel database (utenti legacy)
     const usernameToEmailMap: Record<string, string> = {
       pedonev: "vpedone@entermed.it",
       terranap: "pterrana@entermed.it",
       fazioc: "cfazio@entermed.it",
       geracig: "ggeraci@entermed.it",
-      pipitones: "spipitone@entermed.it", // Nuovo utente aggiunto
+      pipitones: "spipitone@entermed.it",
     }
 
-    // Ottieni l'email dal mapping username o usa direttamente l'input come email
-    const actualEmail = usernameToEmailMap[email] || email
-    console.log("📧 Email mapping:", { username: email, actualEmail })
+    // Password hardcoded per utenti legacy
+    const legacyPasswords: Record<string, string> = {
+      pedonev: "@Vincenzo29",
+      terranap: "@Anita123",
+      fazioc: "@Silvia123",
+      geracig: "Entermed$01",
+      pipitones: "Entermed$01",
+    }
 
-    // Cerca l'utente nel database usando l'email mappata
+    let actualEmail = email
+    let isLegacyUser = false
+
+    // Controlla se è un utente legacy
+    if (usernameToEmailMap[email]) {
+      actualEmail = usernameToEmailMap[email]
+      isLegacyUser = true
+      console.log("📧 Legacy user detected:", { username: email, actualEmail })
+    } else {
+      console.log("📧 New user or email login:", { email })
+    }
+
+    // Cerca l'utente nel database usando l'email
     const { data: user, error } = await supabase
       .from("users")
       .select("id, email, name, password_hash, role")
@@ -36,32 +53,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Credenziali non valide" }, { status: 401 })
     }
 
-    // Verifica la password usando l'username inserito o direttamente la password nel database
+    // Verifica la password
     let isValidPassword = false
 
-    // Prima controlla le password hardcoded per gli utenti esistenti
-    switch (email) {
-      case "pedonev":
-        isValidPassword = password === "@Vincenzo29"
-        break
-      case "terranap":
-        isValidPassword = password === "@Anita123"
-        break
-      case "fazioc":
-        isValidPassword = password === "@Silvia123"
-        break
-      case "geracig":
-        isValidPassword = password === "Entermed$01"
-        break
-      case "pipitones":
-        isValidPassword = password === "Entermed$01"
-        break
-      default:
-        // Per i nuovi utenti, verifica la password nel database
-        isValidPassword = password === user.password_hash
+    if (isLegacyUser) {
+      // Per utenti legacy, usa le password hardcoded
+      isValidPassword = password === legacyPasswords[email]
+      console.log("🔐 Legacy password validation:", { username: email, isValid: isValidPassword })
+    } else {
+      // Per nuovi utenti, verifica la password nel database
+      isValidPassword = password === user.password_hash
+      console.log("🔐 Database password validation:", { email: actualEmail, isValid: isValidPassword })
     }
-
-    console.log("🔐 Password validation:", { username: email, isValid: isValidPassword })
 
     if (!isValidPassword) {
       console.log("❌ Invalid password")

@@ -6,7 +6,6 @@ export async function GET(request: Request) {
   try {
     const supabase = createServerClient()
 
-    // Ottieni tutti gli utenti
     const { data: users, error } = await supabase
       .from("users")
       .select("id, name, email, role, created_at")
@@ -27,11 +26,11 @@ export async function GET(request: Request) {
 // POST - Crea un nuovo utente
 export async function POST(request: Request) {
   try {
-    const { name, email, username, password, role } = await request.json()
+    const { name, email, password, role } = await request.json()
 
     // Validazione
-    if (!name || !email || !password || !username) {
-      return NextResponse.json({ error: "Nome, email, username e password sono obbligatori" }, { status: 400 })
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "Nome, email e password sono obbligatori" }, { status: 400 })
     }
 
     if (password.length < 6) {
@@ -74,26 +73,6 @@ export async function POST(request: Request) {
     if (error) {
       console.error("Error creating user:", error)
       return NextResponse.json({ error: "Errore nella creazione dell'utente" }, { status: 500 })
-    }
-
-    // Aggiorna il file di mappatura username-email
-    // Questo è un approccio temporaneo, in produzione dovresti usare un database
-    try {
-      // Ottieni il file di mappatura attuale
-      const response = await fetch("/api/admin/update-username-mapping", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          email,
-        }),
-      })
-
-      if (!response.ok) {
-        console.error("Error updating username mapping")
-      }
-    } catch (mappingError) {
-      console.error("Error updating username mapping:", mappingError)
     }
 
     return NextResponse.json(data[0])
