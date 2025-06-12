@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
 
-// Funzione per calcolare correttamente le ore di un turno, escludendo la pausa pranzo nei giorni feriali
-function calculateShiftHours(startTime: string, endTime: string, date: string): number {
+// Funzione per calcolare correttamente le ore di un turno, gestendo la pausa pranzo in modo specifico
+function calculateShiftHours(startTime: string, endTime: string, date: string, shiftType: string): number {
   const [startHour, startMinute] = startTime.split(":").map(Number)
   const [endHour, endMinute] = endTime.split(":").map(Number)
 
@@ -21,12 +21,22 @@ function calculateShiftHours(startTime: string, endTime: string, date: string): 
   const dayOfWeek = new Date(date).getDay()
   const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5
 
-  // Se è un giorno feriale e il turno è abbastanza lungo (>= 5 ore), sottrae 1 ora di pausa
-  if (isWeekday && totalHours >= 5) {
+  // Caso speciale: turno "Ircac" - la pausa è già considerata nell'orario (13-14)
+  const isIrcacShift = shiftType?.toLowerCase() === "ircac"
+
+  // Se è un giorno feriale, non è un turno Ircac, e il turno è abbastanza lungo (>= 5 ore), sottrae 1 ora di pausa
+  if (isWeekday && !isIrcacShift && totalHours >= 5) {
     console.log(
-      `Sottratta 1 ora di pausa per il turno del ${date} (${startTime}-${endTime}): ${totalHours} -> ${totalHours - 1}`,
+      `Sottratta 1 ora di pausa per il turno ${shiftType} del ${date} (${startTime}-${endTime}): ${totalHours} -> ${totalHours - 1}`,
     )
     return totalHours - 1
+  }
+
+  // Per i turni Ircac nei giorni feriali, registra che non viene sottratta la pausa
+  if (isWeekday && isIrcacShift) {
+    console.log(
+      `Turno Ircac del ${date} (${startTime}-${endTime}): pausa già considerata nell'orario, ore totali: ${totalHours}`,
+    )
   }
 
   return totalHours
@@ -86,6 +96,7 @@ export async function GET() {
           email
         ),
         shift_types (
+          id,
           name,
           color
         )
@@ -143,12 +154,12 @@ export async function GET() {
       })
 
       userShifts.forEach((shift) => {
-        // Usa la funzione aggiornata per calcolare le ore, passando anche la data
-        const hours = calculateShiftHours(shift.start_time, shift.end_time, shift.date)
+        // Usa la funzione aggiornata per calcolare le ore, passando anche il tipo di turno
+        const shiftTypeName = shift.shift_types?.name || "Altro"
+        const hours = calculateShiftHours(shift.start_time, shift.end_time, shift.date, shiftTypeName)
         totalHours += hours
 
         // Raggruppa per tipo turno
-        const shiftTypeName = shift.shift_types?.name || "Altro"
         const shiftTypeColor = shift.shift_types?.color || "#666666"
 
         if (!shiftsByType[shiftTypeName]) {
@@ -165,6 +176,7 @@ export async function GET() {
           shiftsByDay[shift.date].shifts.push({
             ...shift,
             hours: hours,
+            isIrcac: shiftTypeName.toLowerCase() === "ircac",
           })
         }
       })

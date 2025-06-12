@@ -174,7 +174,7 @@ export function StatisticsPanel() {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Ore totali (già esclusa 1h di pausa nei giorni feriali)</p>
+                  <p>Ore totali (già esclusa 1h di pausa nei giorni feriali per turni non Ircac)</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -249,7 +249,7 @@ export function StatisticsPanel() {
                             </div>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Pausa pranzo di 1h già esclusa</p>
+                            <p>Pausa pranzo di 1h già esclusa per turni non Ircac</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -307,7 +307,7 @@ export function StatisticsPanel() {
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Ore totali (già esclusa 1h di pausa nei giorni feriali)</p>
+                          <p>Ore totali (già esclusa 1h di pausa nei giorni feriali per turni non Ircac)</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -359,6 +359,9 @@ export function StatisticsPanel() {
                           const hasShifts = dayData && dayData.hours > 0
                           const isWeekday = new Date(day.date).getDay() >= 1 && new Date(day.date).getDay() <= 5
 
+                          // Verifica se ci sono turni Ircac in questo giorno
+                          const hasIrcacShift = hasShifts && dayData.shifts.some((shift) => shift.isIrcac)
+
                           return (
                             <div
                               key={day.date}
@@ -373,7 +376,19 @@ export function StatisticsPanel() {
                               {hasShifts && (
                                 <div className="flex items-center justify-center gap-1">
                                   <div className="text-gray-500 text-xs">{dayData.count}</div>
-                                  {isWeekday && <Coffee className="h-3 w-3 text-amber-600" />}
+                                  {isWeekday && !hasIrcacShift && <Coffee className="h-3 w-3 text-amber-600" />}
+                                  {hasIrcacShift && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="text-xs text-amber-600">IR</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Turno Ircac: pausa 13-14 già inclusa nell'orario</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -405,7 +420,11 @@ export function StatisticsPanel() {
             <p className="mt-1">
               <Coffee className="h-3 w-3 inline-block text-amber-600 mr-1" />
               <strong>Pausa pranzo:</strong> 1 ora di pausa è automaticamente esclusa dal conteggio nei giorni feriali
-              per turni di almeno 5 ore.
+              per turni di almeno 5 ore (eccetto turni Ircac).
+            </p>
+            <p className="mt-1">
+              <span className="text-amber-600 font-bold mr-1">IR</span>
+              <strong>Turni Ircac:</strong> Per i turni Ircac la pausa è già considerata nell'orario 13-14.
             </p>
           </div>
         </CardContent>
