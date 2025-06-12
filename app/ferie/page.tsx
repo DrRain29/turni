@@ -35,6 +35,8 @@ const FeriePage = () => {
   }
 
   const handleBookVacation = async (startDate: string, endDate: string, description: string, targetUserId?: string) => {
+    if (!user) return false
+
     try {
       const response = await fetch("/api/vacations", {
         method: "POST",
