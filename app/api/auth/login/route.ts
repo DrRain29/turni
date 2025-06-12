@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       pipitones: "spipitone@entermed.it",
     }
 
-    // Password hardcoded per utenti legacy (CORRETTE)
+    // Password hardcoded per utenti legacy (SOLO per chi non ha mai cambiato password)
     const legacyPasswords: Record<string, string> = {
       pedonev: "@Vincenzo29",
       terranap: "@Anita123",
@@ -60,23 +60,18 @@ export async function POST(request: NextRequest) {
     if (isLegacyUser && legacyUsername) {
       console.log("🔐 Verifying legacy user password for:", legacyUsername)
 
-      // Per utenti legacy, verifica prima se hanno una password aggiornata nel database
-      if (user.password_hash && user.password_hash.length > 0) {
-        // Prova prima la password nel database (se l'hanno cambiata)
-        isValidPassword = password === user.password_hash
-        console.log("🔐 Trying database password:", isValidPassword)
+      // Controlla se l'utente ha mai cambiato la password
+      const hasCustomPassword =
+        user.password_hash && user.password_hash.length > 0 && user.password_hash !== legacyPasswords[legacyUsername]
 
-        // Se la password del database non funziona, prova quella legacy
-        if (!isValidPassword && legacyPasswords[legacyUsername]) {
-          isValidPassword = password === legacyPasswords[legacyUsername]
-          console.log("🔐 Trying legacy password:", isValidPassword)
-        }
+      if (hasCustomPassword) {
+        // L'utente ha cambiato la password - USA SOLO quella nel database
+        isValidPassword = password === user.password_hash
+        console.log("🔐 User has custom password, using database only:", isValidPassword)
       } else {
-        // Se non c'è password nel database, usa quella legacy
-        if (legacyPasswords[legacyUsername]) {
-          isValidPassword = password === legacyPasswords[legacyUsername]
-          console.log("🔐 Using legacy password only:", isValidPassword)
-        }
+        // L'utente NON ha mai cambiato la password - USA SOLO quella legacy
+        isValidPassword = password === legacyPasswords[legacyUsername]
+        console.log("🔐 User has original password, using legacy only:", isValidPassword)
       }
     } else {
       // Per nuovi utenti o login con email, verifica solo la password nel database
