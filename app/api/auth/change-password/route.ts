@@ -26,8 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
     }
 
-    // Verifica la password corrente
-    let isCurrentPasswordValid = false
+    console.log("🔍 Change password attempt for user:", user.email)
 
     // Mappa email agli username per utenti legacy
     const emailToUsernameMap: Record<string, string> = {
@@ -47,17 +46,35 @@ export async function POST(request: NextRequest) {
       pipitones: "Entermed$01",
     }
 
+    // Verifica la password corrente
+    let isCurrentPasswordValid = false
     const username = emailToUsernameMap[user.email]
+    const isLegacyUser = !!username
 
-    if (username && legacyPasswords[username]) {
-      // Utente legacy - verifica con password hardcoded
-      isCurrentPasswordValid = current_password === legacyPasswords[username]
+    if (isLegacyUser && username) {
+      console.log("🔐 Verifying legacy user password for:", username)
+
+      // Controlla se l'utente ha mai cambiato la password
+      const hasCustomPassword =
+        user.password_hash && user.password_hash.length > 0 && user.password_hash !== legacyPasswords[username]
+
+      if (hasCustomPassword) {
+        // L'utente ha cambiato la password - USA SOLO quella nel database
+        isCurrentPasswordValid = current_password === user.password_hash
+        console.log("🔐 User has custom password, using database only:", isCurrentPasswordValid)
+      } else {
+        // L'utente NON ha mai cambiato la password - USA SOLO quella legacy
+        isCurrentPasswordValid = current_password === legacyPasswords[username]
+        console.log("🔐 User has original password, using legacy only:", isCurrentPasswordValid)
+      }
     } else {
-      // Nuovo utente - verifica con password nel database
+      // Per nuovi utenti, verifica solo la password nel database
       isCurrentPasswordValid = current_password === user.password_hash
+      console.log("🔐 Database password validation for new user:", isCurrentPasswordValid)
     }
 
     if (!isCurrentPasswordValid) {
+      console.log("❌ Invalid current password for user:", user.email)
       return NextResponse.json({ error: "Password corrente non valida" }, { status: 401 })
     }
 
@@ -74,12 +91,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Errore nell'aggiornamento della password" }, { status: 500 })
     }
 
+    console.log("✅ Password successfully changed for:", user.email)
     return NextResponse.json({
       success: true,
       message: "Password aggiornata con successo",
     })
   } catch (error) {
-    console.error("Change password error:", error)
+    console.error("❌ Change password error:", error)
     return NextResponse.json({ error: "Errore del server" }, { status: 500 })
   }
 }
