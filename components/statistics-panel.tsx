@@ -322,7 +322,16 @@ export function StatisticsPanel() {
                               </div>
                               {hasShifts && (
                                 <div className="flex items-center justify-center gap-1">
-                                  <div className="text-gray-500 text-xs">{dayData.count}</div>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="text-gray-500 text-xs">{dayData.count}</div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Numero di turni in questo giorno</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                   {showCoffeeIcon && <Coffee className="h-3 w-3 text-amber-600" />}
                                 </div>
                               )}
