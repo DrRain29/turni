@@ -43,15 +43,22 @@ export default function FeriePage() {
     if (!user) return false
 
     try {
+      console.log("Booking vacation:", {
+        user_id: user.id,
+        user_role: user.role,
+        target_user_id: targetUserId,
+      })
+
       const response = await fetch("/api/vacations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           user_id: user.id,
+          user_role: user.role, // Aggiungiamo esplicitamente il ruolo
           start_date: startDate,
           end_date: endDate,
           notes: description,
-          target_user_id: targetUserId, // Nuovo parametro per admin
+          target_user_id: targetUserId,
         }),
       })
 
@@ -64,6 +71,7 @@ export default function FeriePage() {
         return false
       }
     } catch (error) {
+      console.error("Error booking vacation:", error)
       alert("Errore di connessione")
       return false
     }

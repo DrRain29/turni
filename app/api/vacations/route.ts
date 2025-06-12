@@ -31,38 +31,21 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { user_id, start_date, end_date, notes, target_user_id } = await request.json()
+    const { user_id, user_role, start_date, end_date, notes, target_user_id } = await request.json()
+    console.log("POST /api/vacations - Received request:", { user_id, user_role, target_user_id })
 
     const supabase = createServerClient()
-
-    // Verifica l'utente corrente
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: "Non autorizzato" }, { status: 401 })
-    }
-
-    // Ottieni i dettagli dell'utente corrente
-    const { data: currentUser, error: userError } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user_id)
-      .single()
-
-    if (userError) {
-      console.error("Error fetching user:", userError)
-      return NextResponse.json({ error: "Errore nel recupero utente" }, { status: 500 })
-    }
 
     // Determina l'ID utente finale per cui creare le ferie
     let finalUserId = user_id
 
     // Se è specificato target_user_id, verifica che l'utente corrente sia admin
     if (target_user_id && target_user_id !== user_id) {
-      if (currentUser.role !== "admin") {
-        console.log(`User ${user_id} tried to create vacation for ${target_user_id} but is not admin`)
+      // Verifica direttamente il ruolo passato dal client
+      if (user_role !== "admin") {
+        console.log(
+          `User ${user_id} (role: ${user_role}) tried to create vacation for ${target_user_id} but is not admin`,
+        )
         return NextResponse.json(
           { error: "Solo gli amministratori possono creare ferie per altri utenti" },
           { status: 403 },
