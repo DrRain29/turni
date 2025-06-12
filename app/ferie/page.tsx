@@ -51,7 +51,7 @@ const FeriePage = () => {
       })
 
       if (response.ok) {
-        await fetchVacations()
+        fetchVacations()
         return true
       } else {
         const data = await response.json()
