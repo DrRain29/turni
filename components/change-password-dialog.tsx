@@ -14,7 +14,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Lock, Save, X, Eye, EyeOff } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Lock, Save, X, Eye, EyeOff, AlertCircle, Check } from "lucide-react"
 
 interface ChangePasswordDialogProps {
   isOpen: boolean
@@ -39,13 +40,24 @@ export function ChangePasswordDialog({ isOpen, onClose, userId, userName }: Chan
     setError("")
     setSuccess("")
 
+    // Validazioni
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError("Tutti i campi sono obbligatori")
+      return
+    }
+
     if (newPassword !== confirmPassword) {
       setError("Le nuove password non coincidono")
       return
     }
 
-    if (newPassword.length < 4) {
-      setError("La nuova password deve essere di almeno 4 caratteri")
+    if (newPassword.length < 6) {
+      setError("La nuova password deve essere di almeno 6 caratteri")
+      return
+    }
+
+    if (currentPassword === newPassword) {
+      setError("La nuova password deve essere diversa da quella attuale")
       return
     }
 
@@ -66,6 +78,11 @@ export function ChangePasswordDialog({ isOpen, onClose, userId, userName }: Chan
 
       if (response.ok) {
         setSuccess("Password aggiornata con successo!")
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+
+        // Chiudi il dialog dopo un breve ritardo
         setTimeout(() => {
           handleClose()
         }, 2000)
@@ -97,14 +114,28 @@ export function ChangePasswordDialog({ isOpen, onClose, userId, userName }: Chan
             Cambia Password
           </DialogTitle>
           <DialogDescription>
-            Cambia la password per <strong>{userName}</strong>
+            Cambia la tua password per <strong>{userName}</strong>
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert className="bg-green-50 text-green-800 border-green-200">
+              <Check className="h-4 w-4 text-green-600" />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
           {/* Password corrente */}
           <div>
-            <Label htmlFor="current-password">Password Corrente</Label>
+            <Label htmlFor="current-password">Password Corrente *</Label>
             <div className="relative">
               <Input
                 id="current-password"
@@ -127,7 +158,7 @@ export function ChangePasswordDialog({ isOpen, onClose, userId, userName }: Chan
 
           {/* Nuova password */}
           <div>
-            <Label htmlFor="new-password">Nuova Password</Label>
+            <Label htmlFor="new-password">Nuova Password *</Label>
             <div className="relative">
               <Input
                 id="new-password"
@@ -136,7 +167,7 @@ export function ChangePasswordDialog({ isOpen, onClose, userId, userName }: Chan
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Inserisci la nuova password"
                 required
-                minLength={4}
+                minLength={6}
                 className="pr-10"
               />
               <button
@@ -147,12 +178,12 @@ export function ChangePasswordDialog({ isOpen, onClose, userId, userName }: Chan
                 {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <div className="text-xs text-gray-500 mt-1">Minimo 4 caratteri</div>
+            <div className="text-xs text-gray-500 mt-1">Minimo 6 caratteri</div>
           </div>
 
           {/* Conferma nuova password */}
           <div>
-            <Label htmlFor="confirm-password">Conferma Nuova Password</Label>
+            <Label htmlFor="confirm-password">Conferma Nuova Password *</Label>
             <div className="relative">
               <Input
                 id="confirm-password"
@@ -161,7 +192,7 @@ export function ChangePasswordDialog({ isOpen, onClose, userId, userName }: Chan
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Conferma la nuova password"
                 required
-                minLength={4}
+                minLength={6}
                 className="pr-10"
               />
               <button
@@ -173,10 +204,6 @@ export function ChangePasswordDialog({ isOpen, onClose, userId, userName }: Chan
               </button>
             </div>
           </div>
-
-          {/* Messaggi */}
-          {error && <div className="text-red-600 text-sm">{error}</div>}
-          {success && <div className="text-green-600 text-sm">{success}</div>}
 
           <DialogFooter className="flex gap-2">
             <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>

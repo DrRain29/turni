@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { Calendar, Clock, LogOut, Menu, X, Lock, BarChart3, LogIn, Shield } from "lucide-react"
 import Link from "next/link"
@@ -42,7 +42,7 @@ export function Navigation() {
       href: "/admin",
       icon: Shield,
       description: "Pannello amministratore",
-      adminOnly: true, // Aggiungi questa proprietà
+      adminOnly: true,
     },
   ]
 
@@ -122,24 +122,15 @@ export function Navigation() {
                     )}
                   </span>
                   <div className="hidden sm:flex items-center gap-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled
-                            className="flex items-center gap-2 opacity-50 cursor-not-allowed"
-                          >
-                            <Lock className="h-4 w-4" />
-                            Cambia Password
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Attualmente disabilitato</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowChangePasswordDialog(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Lock className="h-4 w-4" />
+                      Cambia Password
+                    </Button>
                     <Button variant="outline" size="sm" onClick={logout}>
                       <LogOut className="h-4 w-4 mr-2" />
                       Esci
@@ -205,24 +196,18 @@ export function Navigation() {
                       </Badge>
                     )}
                   </div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="block">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled
-                          className="w-full justify-start gap-2 opacity-50 cursor-not-allowed"
-                        >
-                          <Lock className="h-4 w-4" />
-                          Cambia Password
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Attualmente disabilitato</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowChangePasswordDialog(true)
+                      setIsMobileMenuOpen(false)
+                    }}
+                    className="w-full justify-start gap-2"
+                  >
+                    <Lock className="h-4 w-4" />
+                    Cambia Password
+                  </Button>
                   <Button variant="outline" size="sm" onClick={logout} className="w-full justify-start gap-2">
                     <LogOut className="h-4 w-4" />
                     Esci
@@ -234,7 +219,7 @@ export function Navigation() {
         </div>
       </header>
 
-      {/* Dialog per cambiare password (mantenuto per compatibilità futura) */}
+      {/* Dialog per cambiare password */}
       {user && (
         <ChangePasswordDialog
           isOpen={showChangePasswordDialog}

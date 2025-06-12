@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       pipitones: "spipitone@entermed.it",
     }
 
-    // Password hardcoded per utenti legacy
+    // Password hardcoded per utenti legacy (solo se non hanno mai cambiato password)
     const legacyPasswords: Record<string, string> = {
       pedonev: "@Vincenzo29",
       terranap: "@Anita123",
@@ -57,9 +57,17 @@ export async function POST(request: NextRequest) {
     let isValidPassword = false
 
     if (isLegacyUser) {
-      // Per utenti legacy, usa le password hardcoded
-      isValidPassword = password === legacyPasswords[email]
-      console.log("🔐 Legacy password validation:", { username: email, isValid: isValidPassword })
+      // Per utenti legacy, prima prova la password nel database (se l'hanno cambiata)
+      // Se non funziona, prova quella hardcoded
+      if (user.password_hash && user.password_hash !== legacyPasswords[email]) {
+        // L'utente ha cambiato la password, usa quella nel database
+        isValidPassword = password === user.password_hash
+        console.log("🔐 Legacy user with updated password:", { username: email, isValid: isValidPassword })
+      } else {
+        // Usa la password hardcoded originale
+        isValidPassword = password === legacyPasswords[email]
+        console.log("🔐 Legacy user with original password:", { username: email, isValid: isValidPassword })
+      }
     } else {
       // Per nuovi utenti, verifica la password nel database
       isValidPassword = password === user.password_hash

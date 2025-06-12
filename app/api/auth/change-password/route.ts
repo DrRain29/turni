@@ -9,8 +9,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Tutti i campi sono obbligatori" }, { status: 400 })
     }
 
-    if (new_password.length < 4) {
-      return NextResponse.json({ error: "La nuova password deve essere di almeno 4 caratteri" }, { status: 400 })
+    if (new_password.length < 6) {
+      return NextResponse.json({ error: "La nuova password deve essere di almeno 6 caratteri" }, { status: 400 })
     }
 
     const supabase = createServerClient()
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Verifica l'utente
     const { data: user, error: fetchError } = await supabase
       .from("users")
-      .select("id, email")
+      .select("id, email, password_hash")
       .eq("id", user_id)
       .single()
 
@@ -26,58 +26,57 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
     }
 
-    // Verifica la password corrente usando username
+    // Verifica la password corrente
     let isCurrentPasswordValid = false
 
-    // Mappa username alle email esistenti nel database
-    const usernameToEmailMap: Record<string, string> = {
-      pedonev: "vpedone@entermed.it",
-      terranap: "pterrana@entermed.it",
-      fazioc: "cfazio@entermed.it",
-      geracig: "ggeraci@entermed.it",
-      pipitones: "spipitone@entermed.it", // Nuovo utente aggiunto
-    }
-
-    // Ottieni l'username dall'email dell'utente
+    // Mappa email agli username per utenti legacy
     const emailToUsernameMap: Record<string, string> = {
       "vpedone@entermed.it": "pedonev",
       "pterrana@entermed.it": "terranap",
       "cfazio@entermed.it": "fazioc",
       "ggeraci@entermed.it": "geracig",
-      "spipitone@entermed.it": "pipitones", // Nuovo utente aggiunto
+      "spipitone@entermed.it": "pipitones",
     }
 
-    const username = emailToUsernameMap[user.email] || user.email
+    // Password hardcoded per utenti legacy
+    const legacyPasswords: Record<string, string> = {
+      pedonev: "@Vincenzo29",
+      terranap: "@Anita123",
+      fazioc: "@Silvia123",
+      geracig: "Entermed$01",
+      pipitones: "Entermed$01",
+    }
 
-    switch (username) {
-      case "pedonev":
-        isCurrentPasswordValid = current_password === "@Vincenzo29"
-        break
-      case "terranap":
-        isCurrentPasswordValid = current_password === "@Anita123"
-        break
-      case "fazioc":
-        isCurrentPasswordValid = current_password === "@Silvia123"
-        break
-      case "geracig":
-        isCurrentPasswordValid = current_password === "Entermed$01"
-        break
-      case "pipitones":
-        isCurrentPasswordValid = current_password === "Entermed$01"
-        break
-      default:
-        isCurrentPasswordValid = false
+    const username = emailToUsernameMap[user.email]
+
+    if (username && legacyPasswords[username]) {
+      // Utente legacy - verifica con password hardcoded
+      isCurrentPasswordValid = current_password === legacyPasswords[username]
+    } else {
+      // Nuovo utente - verifica con password nel database
+      isCurrentPasswordValid = current_password === user.password_hash
     }
 
     if (!isCurrentPasswordValid) {
       return NextResponse.json({ error: "Password corrente non valida" }, { status: 401 })
     }
 
-    // Per ora, restituiamo solo un messaggio di successo senza salvare nel database
-    // Implementeremo il salvataggio quando avremo aggiunto il campo al database
+    // Aggiorna la password nel database
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        password_hash: new_password, // In produzione: await bcrypt.hash(new_password, 10)
+      })
+      .eq("id", user_id)
+
+    if (updateError) {
+      console.error("Error updating password:", updateError)
+      return NextResponse.json({ error: "Errore nell'aggiornamento della password" }, { status: 500 })
+    }
+
     return NextResponse.json({
       success: true,
-      message: "Funzionalità cambio password temporaneamente disabilitata - contatta l'amministratore",
+      message: "Password aggiornata con successo",
     })
   } catch (error) {
     console.error("Change password error:", error)
