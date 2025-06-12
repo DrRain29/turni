@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
 
-// Funzione per calcolare correttamente le ore di un turno
-function calculateShiftHours(startTime: string, endTime: string): number {
+// Funzione per calcolare correttamente le ore di un turno, escludendo la pausa pranzo nei giorni feriali
+function calculateShiftHours(startTime: string, endTime: string, date: string): number {
   const [startHour, startMinute] = startTime.split(":").map(Number)
   const [endHour, endMinute] = endTime.split(":").map(Number)
 
@@ -14,7 +14,22 @@ function calculateShiftHours(startTime: string, endTime: string): number {
     endMinutes += 24 * 60 // Aggiunge 24 ore
   }
 
-  return (endMinutes - startMinutes) / 60
+  // Calcola le ore totali
+  const totalHours = (endMinutes - startMinutes) / 60
+
+  // Verifica se è un giorno feriale (1-5 = lunedì-venerdì)
+  const dayOfWeek = new Date(date).getDay()
+  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5
+
+  // Se è un giorno feriale e il turno è abbastanza lungo (>= 5 ore), sottrae 1 ora di pausa
+  if (isWeekday && totalHours >= 5) {
+    console.log(
+      `Sottratta 1 ora di pausa per il turno del ${date} (${startTime}-${endTime}): ${totalHours} -> ${totalHours - 1}`,
+    )
+    return totalHours - 1
+  }
+
+  return totalHours
 }
 
 // Funzione per ottenere l'inizio della settimana (lunedì) - FIX FUSO ORARIO
@@ -128,8 +143,8 @@ export async function GET() {
       })
 
       userShifts.forEach((shift) => {
-        // FIX: Usa la funzione corretta per calcolare le ore
-        const hours = calculateShiftHours(shift.start_time, shift.end_time)
+        // Usa la funzione aggiornata per calcolare le ore, passando anche la data
+        const hours = calculateShiftHours(shift.start_time, shift.end_time, shift.date)
         totalHours += hours
 
         // Raggruppa per tipo turno

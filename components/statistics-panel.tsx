@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Users, Clock, TrendingUp, Star, Calendar, RefreshCw, MapPin } from "lucide-react"
+import { BarChart3, Users, Clock, TrendingUp, Star, Calendar, RefreshCw, MapPin, Coffee } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface UserStats {
   user_id: string
@@ -160,11 +161,23 @@ export function StatisticsPanel() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
-            <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
-              <Clock className="h-5 w-5 md:h-6 md:w-6 text-blue-600 mx-auto mb-2" />
-              <div className="text-xl md:text-2xl font-bold text-blue-900">{data.summary.totalHours}h</div>
-              <div className="text-xs md:text-sm text-blue-600">Ore Totali</div>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-center">
+                      <Clock className="h-5 w-5 md:h-6 md:w-6 text-blue-600 mx-auto mb-2" />
+                      <Coffee className="h-3 w-3 md:h-4 md:w-4 text-amber-600 ml-1 mb-2" />
+                    </div>
+                    <div className="text-xl md:text-2xl font-bold text-blue-900">{data.summary.totalHours}h</div>
+                    <div className="text-xs md:text-sm text-blue-600">Ore Totali</div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Ore totali (già esclusa 1h di pausa nei giorni feriali)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <div className="text-center p-3 md:p-4 bg-green-50 rounded-lg">
               <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-green-600 mx-auto mb-2" />
               <div className="text-xl md:text-2xl font-bold text-green-900">{data.summary.totalShifts}</div>
@@ -209,12 +222,17 @@ export function StatisticsPanel() {
               }, 0)
 
               const isToday = day.date === new Date().toISOString().split("T")[0]
+              const isWeekday = new Date(day.date).getDay() >= 1 && new Date(day.date).getDay() <= 5
 
               return (
                 <div
                   key={day.date}
                   className={`p-2 md:p-3 rounded-lg border text-center ${
-                    isToday ? "bg-blue-50 border-blue-200" : "bg-gray-50 border-gray-200"
+                    isToday
+                      ? "bg-blue-50 border-blue-200"
+                      : isWeekday
+                        ? "bg-gray-50 border-gray-200"
+                        : "bg-gray-50 border-gray-200 opacity-80"
                   }`}
                 >
                   <div className="font-medium text-xs md:text-sm text-gray-700 capitalize">{day.dayShort}</div>
@@ -222,6 +240,20 @@ export function StatisticsPanel() {
                   <div className="mt-1 md:mt-2">
                     <div className="text-sm md:text-lg font-bold text-blue-600">{dayTotalHours.toFixed(1)}h</div>
                     <div className="text-xs text-gray-500">{dayTotalShifts} turni</div>
+                    {isWeekday && dayTotalShifts > 0 && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-center mt-1">
+                              <Coffee className="h-3 w-3 text-amber-600" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Pausa pranzo di 1h già esclusa</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                 </div>
               )
@@ -266,7 +298,19 @@ export function StatisticsPanel() {
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
-                    <div className="text-xl md:text-2xl font-bold text-blue-600">{employee.totalHours}h</div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1">
+                            <div className="text-xl md:text-2xl font-bold text-blue-600">{employee.totalHours}h</div>
+                            <Coffee className="h-3 w-3 md:h-4 md:w-4 text-amber-600" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Ore totali (già esclusa 1h di pausa nei giorni feriali)</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <div className="text-xs md:text-sm text-gray-500">{employee.totalShifts} turni</div>
                   </div>
                 </div>
@@ -313,6 +357,7 @@ export function StatisticsPanel() {
                         {data.weekDays.map((day) => {
                           const dayData = employee.shiftsByDay[day.date]
                           const hasShifts = dayData && dayData.hours > 0
+                          const isWeekday = new Date(day.date).getDay() >= 1 && new Date(day.date).getDay() <= 5
 
                           return (
                             <div
@@ -325,7 +370,12 @@ export function StatisticsPanel() {
                               <div className="text-gray-800 font-bold text-xs md:text-sm">
                                 {hasShifts ? `${dayData.hours.toFixed(1)}h` : "-"}
                               </div>
-                              {hasShifts && <div className="text-gray-500 text-xs">{dayData.count}</div>}
+                              {hasShifts && (
+                                <div className="flex items-center justify-center gap-1">
+                                  <div className="text-gray-500 text-xs">{dayData.count}</div>
+                                  {isWeekday && <Coffee className="h-2 w-2 text-amber-600" />}
+                                </div>
+                              )}
                             </div>
                           )
                         })}
@@ -352,6 +402,11 @@ export function StatisticsPanel() {
               dati della settimana corrente.
             </p>
             <p className="mt-1">🔄 I dati si resettano automaticamente all'inizio di ogni nuova settimana (lunedì).</p>
+            <p className="mt-1">
+              <Coffee className="h-3 w-3 inline-block text-amber-600 mr-1" />
+              <strong>Pausa pranzo:</strong> 1 ora di pausa è automaticamente esclusa dal conteggio nei giorni feriali
+              per turni di almeno 5 ore.
+            </p>
           </div>
         </CardContent>
       </Card>
