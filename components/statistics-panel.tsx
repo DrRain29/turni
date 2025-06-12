@@ -152,57 +152,6 @@ export function StatisticsPanel() {
         </CardHeader>
       </Card>
 
-      {/* Riepilogo generale - Mobile Responsive */}
-      <Card className="w-full">
-        <CardHeader className="pb-3 md:pb-6">
-          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-            <BarChart3 className="h-4 w-4 md:h-5 md:w-5" />
-            Riepilogo Settimana
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
-                    <div className="flex items-center justify-center">
-                      <Clock className="h-5 w-5 md:h-6 md:w-6 text-blue-600 mx-auto mb-2" />
-                      <Coffee className="h-3 w-3 md:h-4 md:w-4 text-amber-600 ml-1 mb-2" />
-                    </div>
-                    <div className="text-xl md:text-2xl font-bold text-blue-900">{data.summary.totalHours}h</div>
-                    <div className="text-xs md:text-sm text-blue-600">Ore Totali</div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Ore totali (già esclusa 1h di pausa nei giorni feriali)</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <div className="text-center p-3 md:p-4 bg-green-50 rounded-lg">
-              <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-green-600 mx-auto mb-2" />
-              <div className="text-xl md:text-2xl font-bold text-green-900">{data.summary.totalShifts}</div>
-              <div className="text-xs md:text-sm text-green-600">Turni Totali</div>
-            </div>
-            <div className="text-center p-3 md:p-4 bg-purple-50 rounded-lg">
-              <Users className="h-5 w-5 md:h-6 md:w-6 text-purple-600 mx-auto mb-2" />
-              <div className="text-xl md:text-2xl font-bold text-purple-900">{data.summary.activeUsers}</div>
-              <div className="text-xs md:text-sm text-purple-600">Dipendenti Attivi</div>
-            </div>
-            <div className="text-center p-3 md:p-4 bg-orange-50 rounded-lg">
-              <Users className="h-5 w-5 md:h-6 md:w-6 text-orange-600 mx-auto mb-2" />
-              <div className="text-xl md:text-2xl font-bold text-orange-900">{data.summary.totalUsers}</div>
-              <div className="text-xs md:text-sm text-orange-600">Totale Dipendenti</div>
-            </div>
-            <div className="col-span-2 lg:col-span-1 text-center p-3 md:p-4 bg-yellow-50 rounded-lg">
-              <Star className="h-5 w-5 md:h-6 md:w-6 text-yellow-600 mx-auto mb-2" />
-              <div className="text-xl md:text-2xl font-bold text-yellow-900">{data.summary.averageHoursPerUser}h</div>
-              <div className="text-xs md:text-sm text-yellow-600">Media Ore/Dipendente</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Report dipendenti - Mobile Responsive */}
       <Card className="w-full">
         <CardHeader className="pb-3 md:pb-6">
@@ -217,19 +166,12 @@ export function StatisticsPanel() {
               <div
                 key={employee.user_id}
                 className={`p-3 md:p-4 rounded-lg border transition-all ${
-                  index === 0 && employee.totalHours > 0
-                    ? "bg-yellow-50 border-yellow-200 shadow-md"
-                    : employee.totalHours === 0
-                      ? "bg-gray-50 border-gray-200"
-                      : "bg-white border-gray-200 hover:shadow-sm"
+                  employee.totalHours === 0 ? "bg-gray-50 border-gray-200" : "bg-white border-gray-200 hover:shadow-sm"
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2 md:gap-3">
                     <div className="flex items-center gap-2">
-                      {index === 0 && employee.totalHours > 0 && (
-                        <Star className="h-3 w-3 md:h-4 md:w-4 text-yellow-500" />
-                      )}
                       <span className="font-semibold text-base md:text-lg">{employee.name}</span>
                       {index < 3 && employee.totalHours > 0 && (
                         <Badge variant={index === 0 ? "default" : "secondary"} className="text-xs">
@@ -339,6 +281,57 @@ export function StatisticsPanel() {
                 )}
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Riepilogo generale - Mobile Responsive */}
+      <Card className="w-full">
+        <CardHeader className="pb-3 md:pb-6">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <BarChart3 className="h-4 w-4 md:h-5 md:w-5" />
+            Riepilogo Settimana
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
+                    <div className="flex items-center justify-center">
+                      <Clock className="h-5 w-5 md:h-6 md:w-6 text-blue-600 mx-auto mb-2" />
+                      <Coffee className="h-3 w-3 md:h-4 md:w-4 text-amber-600 ml-1 mb-2" />
+                    </div>
+                    <div className="text-xl md:text-2xl font-bold text-blue-900">{data.summary.totalHours}h</div>
+                    <div className="text-xs md:text-sm text-blue-600">Ore Totali</div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Ore totali (già esclusa 1h di pausa nei giorni feriali)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <div className="text-center p-3 md:p-4 bg-green-50 rounded-lg">
+              <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-green-600 mx-auto mb-2" />
+              <div className="text-xl md:text-2xl font-bold text-green-900">{data.summary.totalShifts}</div>
+              <div className="text-xs md:text-sm text-green-600">Turni Totali</div>
+            </div>
+            <div className="text-center p-3 md:p-4 bg-purple-50 rounded-lg">
+              <Users className="h-5 w-5 md:h-6 md:w-6 text-purple-600 mx-auto mb-2" />
+              <div className="text-xl md:text-2xl font-bold text-purple-900">{data.summary.activeUsers}</div>
+              <div className="text-xs md:text-sm text-purple-600">Dipendenti Attivi</div>
+            </div>
+            <div className="text-center p-3 md:p-4 bg-orange-50 rounded-lg">
+              <Users className="h-5 w-5 md:h-6 md:w-6 text-orange-600 mx-auto mb-2" />
+              <div className="text-xl md:text-2xl font-bold text-orange-900">{data.summary.totalUsers}</div>
+              <div className="text-xs md:text-sm text-orange-600">Totale Dipendenti</div>
+            </div>
+            <div className="col-span-2 lg:col-span-1 text-center p-3 md:p-4 bg-yellow-50 rounded-lg">
+              <Star className="h-5 w-5 md:h-6 md:w-6 text-yellow-600 mx-auto mb-2" />
+              <div className="text-xl md:text-2xl font-bold text-yellow-900">{data.summary.averageHoursPerUser}h</div>
+              <div className="text-xs md:text-sm text-yellow-600">Media Ore/Dipendente</div>
+            </div>
           </div>
         </CardContent>
       </Card>
