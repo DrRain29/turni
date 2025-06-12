@@ -1,168 +1,314 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Calendar } from "@/components/ui/calendar"
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Edit, Save, X, Calendar, User } from "lucide-react"
-import type { VacationBooking } from "@/types/database"
+import { toast } from "@/components/ui/use-toast"
+import { cn } from "@/lib/utils"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { format } from "date-fns"
+import { CalendarIcon } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
 
 interface EditVacationDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  onSave: (vacationId: string, startDate: string, endDate: string, notes: string) => Promise<boolean>
-  vacation: VacationBooking | null
-  isLoading?: boolean
+  open: boolean
+  setOpen: (open: boolean) => void
+  vacation: Vacation | null
+  onVacationUpdated: (vacation: Vacation) => void
+  onVacationDeleted: (id: number) => void
+  currentUser: User | null
 }
 
-export function EditVacationDialog({ isOpen, onClose, onSave, vacation, isLoading = false }: EditVacationDialogProps) {
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [notes, setNotes] = useState("")
+const formSchema = z.object({
+  start_date: z.date(),
+  end_date: z.date(),
+  reason: z.string().min(2, {
+    message: "Reason must be at least 2 characters.",
+  }),
+  status: z.enum(["pending", "approved", "rejected"]),
+})
+
+export function EditVacationDialog({
+  open,
+  setOpen,
+  vacation,
+  onVacationUpdated,
+  onVacationDeleted,
+  currentUser,
+}: EditVacationDialogProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      start_date: vacation?.start_date ? new Date(vacation.start_date) : new Date(),
+      end_date: vacation?.end_date ? new Date(vacation.end_date) : new Date(),
+      reason: vacation?.reason || "",
+      status: vacation?.status || "pending",
+    },
+    mode: "onChange",
+  })
 
   useEffect(() => {
     if (vacation) {
-      setStartDate(vacation.start_date)
-      setEndDate(vacation.end_date)
-      setNotes(vacation.notes || "")
+      form.reset({
+        start_date: vacation?.start_date ? new Date(vacation.start_date) : new Date(),
+        end_date: vacation?.end_date ? new Date(vacation.end_date) : new Date(),
+        reason: vacation?.reason || "",
+        status: vacation?.status || "pending",
+      })
     }
-  }, [vacation])
+  }, [vacation, form])
 
-  const calculateDays = (start: string, end: string) => {
-    if (!start || !end) return 0
-    const startDate = new Date(start)
-    const endDate = new Date(end)
-    const diffTime = Math.abs(endDate.getTime() - startDate.getTime())
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
-  }
-
-  const handleSave = async () => {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!vacation) return
 
-    const success = await onSave(vacation.id, startDate, endDate, notes.trim())
-    if (success) {
-      onClose()
+    const updatedVacation = {
+      ...vacation,
+      start_date: values.start_date.toISOString(),
+      end_date: values.end_date.toISOString(),
+      reason: values.reason,
+      status: values.status,
+    }
+
+    try {
+      const response = await fetch(`/api/vacations/${vacation.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedVacation),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Vacation updated successfully.",
+        })
+        onVacationUpdated(updatedVacation)
+        setOpen(false)
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update vacation.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update vacation.",
+        variant: "destructive",
+      })
     }
   }
 
-  const handleClose = () => {
-    onClose()
+  const handleDeleteVacation = async () => {
+    if (!vacation) return
+
+    try {
+      const response = await fetch(`/api/vacations/${vacation.id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Vacation deleted successfully.",
+        })
+        onVacationDeleted(vacation.id)
+        setOpen(false)
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete vacation.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete vacation.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleteDialogOpen(false)
+    }
   }
 
-  if (!vacation) return null
-
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Edit className="h-5 w-5" />
-            Modifica Ferie
-          </DialogTitle>
-          <DialogDescription className="space-y-2">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              <span>
-                Modifica le ferie di <strong>{vacation.users?.name}</strong>
-              </span>
-              <Badge variant="outline" className="text-xs">
-                {vacation.users?.email}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Calendar className="h-4 w-4" />
-              <span>
-                Periodo originale: {new Date(vacation.start_date).toLocaleDateString("it-IT")} -{" "}
-                {new Date(vacation.end_date).toLocaleDateString("it-IT")}
-              </span>
-            </div>
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="edit-start-date">Data Inizio</Label>
-              <Input
-                id="edit-start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-end-date">Data Fine</Label>
-              <Input
-                id="edit-end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                min={startDate}
-                className="mt-1"
-              />
-            </div>
-          </div>
-
-          {/* Mostra il conteggio giorni aggiornato */}
-          {startDate && endDate && (
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-blue-600" />
-                <span className="text-blue-800">
-                  <strong>Nuovo periodo:</strong> {calculateDays(startDate, endDate)} giorni
-                  {calculateDays(startDate, endDate) !== calculateDays(vacation.start_date, vacation.end_date) && (
-                    <span className="ml-2 text-blue-600">
-                      (
-                      {calculateDays(startDate, endDate) > calculateDays(vacation.start_date, vacation.end_date)
-                        ? "+"
-                        : ""}
-                      {calculateDays(startDate, endDate) - calculateDays(vacation.start_date, vacation.end_date)}{" "}
-                      giorni)
-                    </span>
-                  )}
-                </span>
-              </div>
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>{/* <Button variant="outline">Edit</Button> */}</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Edit Vacation</AlertDialogTitle>
+          {vacation && currentUser?.role === "admin" && vacation.user_id !== currentUser.id && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Attenzione:</strong> Stai modificando le ferie di <strong>{vacation.users?.name}</strong>
+              </p>
             </div>
           )}
-
-          <div>
-            <Label htmlFor="edit-notes">Descrizione</Label>
-            <Textarea
-              id="edit-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Es. Vacanza estiva, ferie natalizie, weekend lungo..."
-              rows={3}
-              className="mt-1"
+          <AlertDialogDescription>Make changes to your vacation request here.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="start_date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Start date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-[240px] pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground",
+                          )}
+                        >
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date > new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>The date your vacation will start.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            <div className="text-xs text-gray-500 mt-1">
-              {notes.trim() ? `${notes.trim().length} caratteri` : "Nessuna descrizione"}
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="flex gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-            <X className="h-4 w-4 mr-2" />
-            Annulla
-          </Button>
-          <Button onClick={handleSave} disabled={isLoading || !startDate || !endDate}>
-            <Save className="h-4 w-4 mr-2" />
-            {isLoading ? "Salvando..." : "Salva Modifiche"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <FormField
+              control={form.control}
+              name="end_date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>End date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-[240px] pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground",
+                          )}
+                        >
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date > new Date()}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>The date your vacation will end.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="reason"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reason</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Why are you requesting this vacation?" className="resize-none" {...field} />
+                  </FormControl>
+                  <FormDescription>Please provide a reason for your vacation request.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {currentUser?.role === "admin" && (
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>Set the status of this vacation request.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              {currentUser?.role === "admin" && (
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" type="button">
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this vacation request from our
+                        servers.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteVacation}>Continue</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              <Button type="submit">Save changes</Button>
+            </AlertDialogFooter>
+          </form>
+        </Form>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

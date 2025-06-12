@@ -98,7 +98,9 @@ export function VacationCalendar({
     const dateString = formatDateString(currentDate.getFullYear(), currentDate.getMonth(), date)
     const vacationsOnDay = isDateInVacation(date)
 
-    if (vacationsOnDay.length > 0 && !vacationsOnDay.some((v) => v.user_id === currentUser.id)) {
+    // Gli admin possono selezionare qualsiasi giorno (tranne quelli passati)
+    // Gli utenti normali non possono selezionare giorni con ferie di altri
+    if (vacationsOnDay.length > 0 && !isAdmin && !vacationsOnDay.some((v) => v.user_id === currentUser.id)) {
       return
     }
 
@@ -426,14 +428,15 @@ export function VacationCalendar({
                         key={day}
                         onClick={() => handleDateClick(day)}
                         disabled={
-                          isPast || (hasOtherVacations && !vacationsOnDay.some((v) => v.user_id === currentUser?.id))
+                          isPast ||
+                          (hasOtherVacations && !vacationsOnDay.some((v) => v.user_id === currentUser?.id) && !isAdmin)
                         }
                         className={cn("h-10 text-sm font-medium rounded transition-colors", {
                           "bg-blue-500 text-white": isSelected,
                           "bg-gray-200 text-gray-400 cursor-not-allowed": isPast,
                           "bg-red-100 text-red-600 cursor-not-allowed":
-                            hasOtherVacations && !vacationsOnDay.some((v) => v.user_id === currentUser?.id),
-                          "bg-white border hover:bg-blue-50": !isSelected && !isPast && !hasOtherVacations,
+                            hasOtherVacations && !vacationsOnDay.some((v) => v.user_id === currentUser?.id) && !isAdmin,
+                          "bg-white border hover:bg-blue-50": !isSelected && !isPast && (!hasOtherVacations || isAdmin),
                           "bg-green-100 border-green-300":
                             vacationsOnDay.some((v) => v.user_id === currentUser?.id) && !isSelected,
                         })}
@@ -491,9 +494,9 @@ export function VacationCalendar({
           className={cn("h-20 md:h-24 border border-gray-200 p-1 md:p-2 relative cursor-pointer transition-colors", {
             "bg-blue-100 border-blue-300": isSelected,
             "bg-gray-100 cursor-not-allowed": isPast,
-            "bg-red-50 cursor-not-allowed": hasOtherVacations && !hasMyVacations,
-            "hover:bg-gray-50": isLoggedIn && !isPast && !hasOtherVacations && !isSelected,
-            "hover:bg-blue-50": isLoggedIn && !isPast && !hasOtherVacations && isSelecting,
+            "bg-red-50 cursor-not-allowed": hasOtherVacations && !hasMyVacations && !isAdmin, // Admin può cliccare
+            "hover:bg-gray-50": isLoggedIn && !isPast && (!hasOtherVacations || isAdmin) && !isSelected,
+            "hover:bg-blue-50": isLoggedIn && !isPast && (!hasOtherVacations || isAdmin) && isSelecting,
           })}
           onClick={() => handleDateClick(day)}
         >

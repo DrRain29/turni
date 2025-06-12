@@ -25,6 +25,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // Controlla i permessi: admin può modificare tutto, user solo le proprie
     const canEdit = user_role === "admin" || vacation.user_id === user_id
 
+    console.log(
+      `Edit vacation - User: ${user_id}, Role: ${user_role}, Vacation owner: ${vacation.user_id}, Can edit: ${canEdit}`,
+    )
+
     if (!canEdit) {
       return NextResponse.json({ error: "Non hai i permessi per modificare questa prenotazione" }, { status: 403 })
     }
@@ -33,7 +37,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { data: overlapping, error: checkError } = await supabase
       .from("vacation_bookings")
       .select("*")
-      .eq("user_id", vacation.user_id)
+      .eq("user_id", vacation.user_id) // Usa l'ID del proprietario originale delle ferie
       .eq("status", "confirmed")
       .neq("id", params.id)
       .or(`start_date.lte.${end_date},end_date.gte.${start_date}`)
@@ -44,6 +48,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     if (overlapping && overlapping.length > 0) {
       return NextResponse.json({ error: "Le nuove date si sovrappongono con altre ferie esistenti" }, { status: 400 })
+    }
+
+    if (user_role === "admin" && vacation.user_id !== user_id) {
+      console.log(`Admin ${user_id} is editing vacation of user ${vacation.user_id}`)
     }
 
     // Aggiorna la prenotazione
