@@ -300,14 +300,15 @@ export function StatisticsPanel() {
                           const hasShifts = dayData && dayData.hours > 0
                           const isWeekday = new Date(day.date).getDay() >= 1 && new Date(day.date).getDay() <= 5
 
-                          // Verifica se ci sono turni Ircac in questo giorno
+                          // Verifica se ci sono turni Ircac o Aeroporto in questo giorno
                           const hasIrcacShift = hasShifts && dayData.shifts.some((shift) => shift.isIrcac)
+                          const hasAeroportoShift = hasShifts && dayData.shifts.some((shift) => shift.isAeroporto)
 
                           // Mostra l'icona del caffè solo se:
                           // 1. È un giorno feriale
-                          // 2. Non è un turno Ircac
+                          // 2. Non è un turno Ircac o Aeroporto
                           // 3. L'utente non è esente (Giorgio Geraci)
-                          const showCoffeeIcon = isWeekday && !hasIrcacShift && !employee.isExempt
+                          const showCoffeeIcon = isWeekday && !hasIrcacShift && !hasAeroportoShift && !employee.isExempt
 
                           return (
                             <div
@@ -320,19 +321,9 @@ export function StatisticsPanel() {
                               <div className="text-gray-800 font-bold text-xs md:text-sm">
                                 {hasShifts ? `${dayData.hours.toFixed(1)}h` : "-"}
                               </div>
-                              {hasShifts && (
-                                <div className="flex items-center justify-center gap-1">
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="text-gray-500 text-xs">{dayData.count}</div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Numero di turni in questo giorno</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  {showCoffeeIcon && <Coffee className="h-3 w-3 text-amber-600" />}
+                              {hasShifts && showCoffeeIcon && (
+                                <div className="flex items-center justify-center">
+                                  <Coffee className="h-3 w-3 text-amber-600" />
                                 </div>
                               )}
                             </div>
@@ -364,7 +355,7 @@ export function StatisticsPanel() {
             <p className="mt-1">
               <Coffee className="h-3 w-3 inline-block text-amber-600 mr-1" />
               <strong>Pausa pranzo:</strong> 1 ora di pausa è automaticamente esclusa dal conteggio nei giorni feriali
-              per turni di almeno 5 ore. Per i turni Ircac la pausa è già inclusa nell'orario 13-14.
+              per turni di almeno 5 ore. Per i turni Ircac e Aeroporto la pausa non viene conteggiata.
             </p>
           </div>
         </CardContent>

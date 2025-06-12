@@ -30,6 +30,9 @@ function calculateShiftHours(
   // Caso speciale: turno "Ircac" - la pausa è già considerata nell'orario (13-14)
   const isIrcacShift = shiftType?.toLowerCase() === "ircac"
 
+  // Caso speciale: turno "Aeroporto" - non viene conteggiata l'ora di pausa
+  const isAeroportoShift = shiftType?.toLowerCase().includes("aeroporto")
+
   // Caso speciale: Giorgio Geraci è esente dall'ora di pausa
   const isExemptUser = userName === "Giorgio Geraci"
 
@@ -38,8 +41,8 @@ function calculateShiftHours(
     `Calcolo ore per ${userName}, turno ${shiftType}, data ${date}, giorno ${dayOfWeek}, ore totali ${totalHours}`,
   )
 
-  // Se è un giorno feriale, non è un turno Ircac, non è un utente esente, e il turno è abbastanza lungo (>= 5 ore), sottrae 1 ora di pausa
-  if (isWeekday && !isIrcacShift && !isExemptUser && totalHours >= 5) {
+  // Se è un giorno feriale, non è un turno speciale (Ircac o Aeroporto), non è un utente esente, e il turno è abbastanza lungo (>= 5 ore), sottrae 1 ora di pausa
+  if (isWeekday && !isIrcacShift && !isAeroportoShift && !isExemptUser && totalHours >= 5) {
     console.log(
       `Sottratta 1 ora di pausa per ${userName}, turno ${shiftType} del ${date} (${startTime}-${endTime}): ${totalHours} -> ${totalHours - 1}`,
     )
@@ -50,6 +53,13 @@ function calculateShiftHours(
   if (isWeekday && isIrcacShift) {
     console.log(
       `Turno Ircac del ${date} (${startTime}-${endTime}): pausa già considerata nell'orario, ore totali: ${totalHours}`,
+    )
+  }
+
+  // Per i turni Aeroporto nei giorni feriali, registra che non viene sottratta la pausa
+  if (isWeekday && isAeroportoShift) {
+    console.log(
+      `Turno Aeroporto del ${date} (${startTime}-${endTime}): non viene conteggiata l'ora di pausa, ore totali: ${totalHours}`,
     )
   }
 
@@ -197,6 +207,7 @@ export async function GET() {
             ...shift,
             hours: hours,
             isIrcac: shiftTypeName.toLowerCase() === "ircac",
+            isAeroporto: shiftTypeName.toLowerCase().includes("aeroporto"),
             isExempt: userName === "Giorgio Geraci",
           })
         }
