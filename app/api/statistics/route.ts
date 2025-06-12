@@ -2,7 +2,13 @@ import { NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
 
 // Funzione per calcolare correttamente le ore di un turno, gestendo la pausa pranzo in modo specifico
-function calculateShiftHours(startTime: string, endTime: string, date: string, shiftType: string): number {
+function calculateShiftHours(
+  startTime: string,
+  endTime: string,
+  date: string,
+  shiftType: string,
+  userName: string,
+): number {
   const [startHour, startMinute] = startTime.split(":").map(Number)
   const [endHour, endMinute] = endTime.split(":").map(Number)
 
@@ -24,10 +30,18 @@ function calculateShiftHours(startTime: string, endTime: string, date: string, s
   // Caso speciale: turno "Ircac" - la pausa è già considerata nell'orario (13-14)
   const isIrcacShift = shiftType?.toLowerCase() === "ircac"
 
-  // Se è un giorno feriale, non è un turno Ircac, e il turno è abbastanza lungo (>= 5 ore), sottrae 1 ora di pausa
-  if (isWeekday && !isIrcacShift && totalHours >= 5) {
+  // Caso speciale: Giorgio Geraci è esente dall'ora di pausa
+  const isExemptUser = userName === "Giorgio Geraci"
+
+  // Log per debug
+  console.log(
+    `Calcolo ore per ${userName}, turno ${shiftType}, data ${date}, giorno ${dayOfWeek}, ore totali ${totalHours}`,
+  )
+
+  // Se è un giorno feriale, non è un turno Ircac, non è un utente esente, e il turno è abbastanza lungo (>= 5 ore), sottrae 1 ora di pausa
+  if (isWeekday && !isIrcacShift && !isExemptUser && totalHours >= 5) {
     console.log(
-      `Sottratta 1 ora di pausa per il turno ${shiftType} del ${date} (${startTime}-${endTime}): ${totalHours} -> ${totalHours - 1}`,
+      `Sottratta 1 ora di pausa per ${userName}, turno ${shiftType} del ${date} (${startTime}-${endTime}): ${totalHours} -> ${totalHours - 1}`,
     )
     return totalHours - 1
   }
@@ -37,6 +51,11 @@ function calculateShiftHours(startTime: string, endTime: string, date: string, s
     console.log(
       `Turno Ircac del ${date} (${startTime}-${endTime}): pausa già considerata nell'orario, ore totali: ${totalHours}`,
     )
+  }
+
+  // Per Giorgio Geraci, registra che è esente dalla pausa
+  if (isExemptUser) {
+    console.log(`${userName} è esente dall'ora di pausa, ore totali: ${totalHours}`)
   }
 
   return totalHours
@@ -154,9 +173,10 @@ export async function GET() {
       })
 
       userShifts.forEach((shift) => {
-        // Usa la funzione aggiornata per calcolare le ore, passando anche il tipo di turno
+        // Usa la funzione aggiornata per calcolare le ore, passando anche il tipo di turno e il nome utente
         const shiftTypeName = shift.shift_types?.name || "Altro"
-        const hours = calculateShiftHours(shift.start_time, shift.end_time, shift.date, shiftTypeName)
+        const userName = shift.users?.name || ""
+        const hours = calculateShiftHours(shift.start_time, shift.end_time, shift.date, shiftTypeName, userName)
         totalHours += hours
 
         // Raggruppa per tipo turno
@@ -177,6 +197,7 @@ export async function GET() {
             ...shift,
             hours: hours,
             isIrcac: shiftTypeName.toLowerCase() === "ircac",
+            isExempt: userName === "Giorgio Geraci",
           })
         }
       })
@@ -189,6 +210,7 @@ export async function GET() {
         totalShifts: userShifts.length,
         shiftsByType,
         shiftsByDay,
+        isExempt: user.name === "Giorgio Geraci",
       }
     })
 

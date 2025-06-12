@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Users, Clock, TrendingUp, Star, Calendar, RefreshCw, MapPin, Coffee } from "lucide-react"
+import { BarChart3, Users, Clock, TrendingUp, Star, Calendar, RefreshCw, Coffee } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface UserStats {
@@ -15,6 +15,7 @@ interface UserStats {
   totalShifts: number
   shiftsByType: Record<string, { count: number; hours: number; color: string }>
   shiftsByDay: Record<string, { count: number; hours: number; shifts: any[] }>
+  isExempt?: boolean
 }
 
 interface WeekDay {
@@ -202,66 +203,6 @@ export function StatisticsPanel() {
         </CardContent>
       </Card>
 
-      {/* Mappa ore giornaliere - Mobile Responsive */}
-      <Card className="w-full">
-        <CardHeader className="pb-3 md:pb-6">
-          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-            <MapPin className="h-4 w-4 md:h-5 md:w-5" />
-            Mappa Ore Giornaliere
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-7 gap-1 md:gap-2">
-            {data.weekDays.map((day) => {
-              const dayTotalHours = data.userStats.reduce((total, user) => {
-                return total + (user.shiftsByDay[day.date]?.hours || 0)
-              }, 0)
-
-              const dayTotalShifts = data.userStats.reduce((total, user) => {
-                return total + (user.shiftsByDay[day.date]?.count || 0)
-              }, 0)
-
-              const isToday = day.date === new Date().toISOString().split("T")[0]
-              const isWeekday = new Date(day.date).getDay() >= 1 && new Date(day.date).getDay() <= 5
-
-              return (
-                <div
-                  key={day.date}
-                  className={`p-2 md:p-3 rounded-lg border text-center ${
-                    isToday
-                      ? "bg-blue-50 border-blue-200"
-                      : isWeekday
-                        ? "bg-gray-50 border-gray-200"
-                        : "bg-gray-50 border-gray-200 opacity-80"
-                  }`}
-                >
-                  <div className="font-medium text-xs md:text-sm text-gray-700 capitalize">{day.dayShort}</div>
-                  <div className="text-sm md:text-lg font-bold text-gray-900">{day.dayNumber}</div>
-                  <div className="mt-1 md:mt-2">
-                    <div className="text-sm md:text-lg font-bold text-blue-600">{dayTotalHours.toFixed(1)}h</div>
-                    <div className="text-xs text-gray-500">{dayTotalShifts} turni</div>
-                    {isWeekday && dayTotalShifts > 0 && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-center mt-1">
-                              <Coffee className="h-3 w-3 text-amber-600" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Pausa pranzo di 1h già esclusa per turni non Ircac</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Report dipendenti - Mobile Responsive */}
       <Card className="w-full">
         <CardHeader className="pb-3 md:pb-6">
@@ -290,6 +231,11 @@ export function StatisticsPanel() {
                         <Star className="h-3 w-3 md:h-4 md:w-4 text-yellow-500" />
                       )}
                       <span className="font-semibold text-base md:text-lg">{employee.name}</span>
+                      {employee.isExempt && (
+                        <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                          Esente pausa
+                        </Badge>
+                      )}
                       {index < 3 && employee.totalHours > 0 && (
                         <Badge variant={index === 0 ? "default" : "secondary"} className="text-xs">
                           #{index + 1}
@@ -303,11 +249,15 @@ export function StatisticsPanel() {
                         <TooltipTrigger asChild>
                           <div className="flex items-center gap-1">
                             <div className="text-xl md:text-2xl font-bold text-blue-600">{employee.totalHours}h</div>
-                            <Coffee className="h-3 w-3 md:h-4 md:w-4 text-amber-600" />
+                            {!employee.isExempt && <Coffee className="h-3 w-3 md:h-4 md:w-4 text-amber-600" />}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Ore totali (già esclusa 1h di pausa nei giorni feriali per turni non Ircac)</p>
+                          {employee.isExempt ? (
+                            <p>Ore totali (esente dalla pausa pranzo)</p>
+                          ) : (
+                            <p>Ore totali (già esclusa 1h di pausa nei giorni feriali per turni non Ircac)</p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -376,7 +326,9 @@ export function StatisticsPanel() {
                               {hasShifts && (
                                 <div className="flex items-center justify-center gap-1">
                                   <div className="text-gray-500 text-xs">{dayData.count}</div>
-                                  {isWeekday && !hasIrcacShift && <Coffee className="h-3 w-3 text-amber-600" />}
+                                  {isWeekday && !hasIrcacShift && !employee.isExempt && (
+                                    <Coffee className="h-3 w-3 text-amber-600" />
+                                  )}
                                   {hasIrcacShift && (
                                     <TooltipProvider>
                                       <Tooltip>
@@ -420,7 +372,7 @@ export function StatisticsPanel() {
             <p className="mt-1">
               <Coffee className="h-3 w-3 inline-block text-amber-600 mr-1" />
               <strong>Pausa pranzo:</strong> 1 ora di pausa è automaticamente esclusa dal conteggio nei giorni feriali
-              per turni di almeno 5 ore (eccetto turni Ircac).
+              per turni di almeno 5 ore (eccetto turni Ircac e utenti esenti).
             </p>
             <p className="mt-1">
               <span className="text-amber-600 font-bold mr-1">IR</span>
