@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { BarChart3, Users, Clock, TrendingUp, Star, Calendar, RefreshCw, Coffee } from "lucide-react"
+import { BarChart3, Users, Clock, TrendingUp, Star, Calendar, RefreshCw } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface UserStats {
@@ -184,10 +184,7 @@ export function StatisticsPanel() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="flex items-center gap-1">
-                            <div className="text-xl md:text-2xl font-bold text-blue-600">{employee.totalHours}h</div>
-                            {!employee.isExempt && <Coffee className="h-3 w-3 md:h-4 md:w-4 text-amber-600" />}
-                          </div>
+                          <div className="text-xl md:text-2xl font-bold text-blue-600">{employee.totalHours}h</div>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Ore totali (già esclusa 1h di pausa nei giorni feriali)</p>
@@ -240,17 +237,6 @@ export function StatisticsPanel() {
                         {data.weekDays.map((day) => {
                           const dayData = employee.shiftsByDay[day.date]
                           const hasShifts = dayData && dayData.hours > 0
-                          const isWeekday = new Date(day.date).getDay() >= 1 && new Date(day.date).getDay() <= 5
-
-                          // Verifica se ci sono turni Ircac o Aeroporto in questo giorno
-                          const hasIrcacShift = hasShifts && dayData.shifts.some((shift) => shift.isIrcac)
-                          const hasAeroportoShift = hasShifts && dayData.shifts.some((shift) => shift.isAeroporto)
-
-                          // Mostra l'icona del caffè solo se:
-                          // 1. È un giorno feriale
-                          // 2. Non è un turno Ircac o Aeroporto
-                          // 3. L'utente non è esente (Giorgio Geraci)
-                          const showCoffeeIcon = isWeekday && !hasIrcacShift && !hasAeroportoShift && !employee.isExempt
 
                           return (
                             <div
@@ -263,11 +249,6 @@ export function StatisticsPanel() {
                               <div className="text-gray-800 font-bold text-xs md:text-sm">
                                 {hasShifts ? `${dayData.hours.toFixed(1)}h` : "-"}
                               </div>
-                              {hasShifts && showCoffeeIcon && (
-                                <div className="flex items-center justify-center">
-                                  <Coffee className="h-3 w-3 text-amber-600" />
-                                </div>
-                              )}
                             </div>
                           )
                         })}
@@ -299,10 +280,7 @@ export function StatisticsPanel() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
-                    <div className="flex items-center justify-center">
-                      <Clock className="h-5 w-5 md:h-6 md:w-6 text-blue-600 mx-auto mb-2" />
-                      <Coffee className="h-3 w-3 md:h-4 md:w-4 text-amber-600 ml-1 mb-2" />
-                    </div>
+                    <Clock className="h-5 w-5 md:h-6 md:w-6 text-blue-600 mx-auto mb-2" />
                     <div className="text-xl md:text-2xl font-bold text-blue-900">{data.summary.totalHours}h</div>
                     <div className="text-xs md:text-sm text-blue-600">Ore Totali</div>
                   </div>
@@ -346,7 +324,6 @@ export function StatisticsPanel() {
             </p>
             <p className="mt-1">🔄 I dati si resettano automaticamente all'inizio di ogni nuova settimana (lunedì).</p>
             <p className="mt-1">
-              <Coffee className="h-3 w-3 inline-block text-amber-600 mr-1" />
               <strong>Pausa pranzo:</strong> 1 ora di pausa è automaticamente esclusa dal conteggio nei giorni feriali
               per turni di almeno 5 ore. Per i turni Ircac e Aeroporto la pausa non viene conteggiata.
             </p>
