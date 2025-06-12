@@ -16,7 +16,7 @@ interface VacationCalendarProps {
   isAdmin?: boolean
   currentUser?: { id: string; role: string; name: string }
   onDeleteVacation?: (vacationId: string) => void
-  onBookVacation?: (startDate: string, endDate: string, description: string) => Promise<boolean>
+  onBookVacation?: (startDate: string, endDate: string, description: string, targetUserId?: string) => Promise<boolean>
   onEditVacation?: (vacationId: string, startDate: string, endDate: string, notes: string) => Promise<boolean>
   isLoggedIn?: boolean
 }
@@ -205,7 +205,7 @@ export function VacationCalendar({
     setShowDescriptionDialog(true)
   }
 
-  const handleBookingConfirm = async (description: string) => {
+  const handleBookingConfirm = async (description: string, targetUserId?: string) => {
     if (!onBookVacation) return
 
     setIsBooking(true)
@@ -213,7 +213,7 @@ export function VacationCalendar({
     const startDate = sortedDates[0]
     const endDate = sortedDates[sortedDates.length - 1]
 
-    const success = await onBookVacation(startDate, endDate, description)
+    const success = await onBookVacation(startDate, endDate, description, targetUserId)
 
     if (success) {
       setIsSelecting(false)
@@ -457,6 +457,8 @@ export function VacationCalendar({
           onConfirm={handleBookingConfirm}
           selectedDates={selectedDates}
           isLoading={isBooking}
+          isAdmin={isAdmin}
+          currentUserId={currentUser?.id}
         />
 
         <EditVacationDialog
@@ -695,6 +697,8 @@ export function VacationCalendar({
         onConfirm={handleBookingConfirm}
         selectedDates={selectedDates}
         isLoading={isBooking}
+        isAdmin={isAdmin}
+        currentUserId={currentUser?.id}
       />
 
       <EditVacationDialog
