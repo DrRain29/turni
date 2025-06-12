@@ -373,7 +373,7 @@ export function StatisticsPanel() {
                               {hasShifts && (
                                 <div className="flex items-center justify-center gap-1">
                                   <div className="text-gray-500 text-xs">{dayData.count}</div>
-                                  {isWeekday && <Coffee className="h-2 w-2 text-amber-600" />}
+                                  {isWeekday && <Coffee className="h-3 w-3 text-amber-600" />}
                                 </div>
                               )}
                             </div>
