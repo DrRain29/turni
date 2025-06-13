@@ -1,17 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Edit, Key, Trash2, MoreHorizontal, Shield, UserIcon, UserCog } from "lucide-react"
 import type { User } from "@/types/database"
 
@@ -27,6 +19,21 @@ interface UserListProps {
 export function UserList({ users, isLoading, error, onEdit, onChangePassword, onDelete }: UserListProps) {
   // Stato per tenere traccia del menu aperto
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Chiudi il menu quando si clicca fuori
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
 
   if (isLoading) {
     return (
@@ -73,20 +80,9 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
     return emailToUsernameMap[email] || null
   }
 
-  // Funzioni per gestire le azioni
-  const handleEdit = (user: User) => {
-    setOpenMenuId(null)
-    onEdit(user)
-  }
-
-  const handleChangePassword = (user: User) => {
-    setOpenMenuId(null)
-    onChangePassword(user)
-  }
-
-  const handleDelete = (user: User) => {
-    setOpenMenuId(null)
-    onDelete(user)
+  // Toggle menu
+  const toggleMenu = (userId: string) => {
+    setOpenMenuId(openMenuId === userId ? null : userId)
   }
 
   return (
@@ -147,41 +143,53 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu open={isOpen} onOpenChange={(open) => setOpenMenuId(open ? user.id : null)}>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <span className="sr-only">Apri menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="z-50">
-                      <DropdownMenuLabel>Azioni</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="flex items-center gap-2 cursor-pointer"
-                        onClick={() => handleEdit(user)}
-                      >
-                        <Edit className="h-4 w-4" />
-                        Modifica
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="flex items-center gap-2 cursor-pointer"
-                        onClick={() => handleChangePassword(user)}
-                      >
-                        <Key className="h-4 w-4" />
-                        Cambia Password
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
-                        onClick={() => handleDelete(user)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Elimina
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TableCell className="text-right relative">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => toggleMenu(user.id)}>
+                    <span className="sr-only">Apri menu</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+
+                  {isOpen && (
+                    <div
+                      ref={menuRef}
+                      className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
+                    >
+                      <div className="py-1">
+                        <div className="px-4 py-2 text-sm text-gray-700 font-medium border-b">Azioni</div>
+                        <button
+                          className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => {
+                            setOpenMenuId(null)
+                            onEdit(user)
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Modifica
+                        </button>
+                        <button
+                          className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          onClick={() => {
+                            setOpenMenuId(null)
+                            onChangePassword(user)
+                          }}
+                        >
+                          <Key className="h-4 w-4 mr-2" />
+                          Cambia Password
+                        </button>
+                        <div className="border-t my-1"></div>
+                        <button
+                          className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                          onClick={() => {
+                            setOpenMenuId(null)
+                            onDelete(user)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Elimina
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             )
