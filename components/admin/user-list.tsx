@@ -1,12 +1,18 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Edit, Key, Trash2, MoreHorizontal, Shield, UserIcon, UserCog } from "lucide-react"
 import type { User } from "@/types/database"
-import { cn } from "@/lib/utils"
 
 interface UserListProps {
   users: User[]
@@ -18,24 +24,6 @@ interface UserListProps {
 }
 
 export function UserList({ users, isLoading, error, onEdit, onChangePassword, onDelete }: UserListProps) {
-  // Stato per tenere traccia del menu aperto
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  // Chiudi il menu quando si clicca fuori
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setOpenMenuId(null)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
-
   if (isLoading) {
     return (
       <div className="text-center py-8">
@@ -81,11 +69,6 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
     return emailToUsernameMap[email] || null
   }
 
-  // Toggle menu
-  const toggleMenu = (userId: string) => {
-    setOpenMenuId(openMenuId === userId ? null : userId)
-  }
-
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -102,7 +85,6 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
           {users.map((user) => {
             const legacyUsername = getLegacyUsername(user.email)
             const isLegacyUser = legacyUsers.includes(user.email)
-            const isOpen = openMenuId === user.id
 
             return (
               <TableRow key={user.id}>
@@ -144,60 +126,38 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-right relative">
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => toggleMenu(user.id)}>
-                    <span className="sr-only">Apri menu</span>
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-
-                  {isOpen && (
-                    <div
-                      ref={menuRef}
-                      className={cn(
-                        "absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white z-50",
-                        "border border-gray-200 py-1 text-sm",
-                        "animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-                      )}
-                      style={{
-                        transformOrigin: "var(--radix-dropdown-menu-content-transform-origin)",
-                        top: "calc(100% + 5px)",
-                      }}
-                    >
-                      <div className="px-2 py-1.5 text-sm font-semibold">Azioni</div>
-                      <div className="h-px bg-gray-200 my-1"></div>
-                      <button
-                        className="flex w-full items-center px-2 py-1.5 text-sm hover:bg-gray-100 focus:bg-gray-100 outline-none"
-                        onClick={() => {
-                          setOpenMenuId(null)
-                          onEdit(user)
-                        }}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <span className="sr-only">Apri menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Azioni</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => onEdit(user)} className="flex items-center gap-2 cursor-pointer">
+                        <Edit className="h-4 w-4" />
                         Modifica
-                      </button>
-                      <button
-                        className="flex w-full items-center px-2 py-1.5 text-sm hover:bg-gray-100 focus:bg-gray-100 outline-none"
-                        onClick={() => {
-                          setOpenMenuId(null)
-                          onChangePassword(user)
-                        }}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => onChangePassword(user)}
+                        className="flex items-center gap-2 cursor-pointer"
                       >
-                        <Key className="h-4 w-4 mr-2" />
+                        <Key className="h-4 w-4" />
                         Cambia Password
-                      </button>
-                      <div className="h-px bg-gray-200 my-1"></div>
-                      <button
-                        className="flex w-full items-center px-2 py-1.5 text-sm text-red-600 hover:bg-gray-100 focus:bg-gray-100 outline-none"
-                        onClick={() => {
-                          setOpenMenuId(null)
-                          onDelete(user)
-                        }}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onDelete(user)}
+                        className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
+                        <Trash2 className="h-4 w-4" />
                         Elimina
-                      </button>
-                    </div>
-                  )}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             )

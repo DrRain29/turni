@@ -1,207 +1,156 @@
 "use client"
 
+import type React from "react"
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
-import type { ShiftType, User } from "@/types/database"
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material"
+import { useAuth } from "../contexts/AuthContext"
+import { addShift } from "../firebase/firestore"
+import { getAllUsers } from "../firebase/firestore"
 
 interface AddShiftDialogProps {
-  isOpen: boolean
+  open: boolean
   onClose: () => void
-  onSave: (
-    userId: string,
-    shiftTypeId: string,
-    date: string,
-    startTime: string,
-    endTime: string,
-    notes: string,
-  ) => Promise<boolean>
-  date: string
-  shiftTypes: ShiftType[]
-  users: User[]
-  currentUser: { id: string; role: string; name: string }
-  isLoading?: boolean
+  onShiftAdded: () => void
 }
 
-export function AddShiftDialog({
-  isOpen,
-  onClose,
-  onSave,
-  date,
-  shiftTypes,
-  users,
-  currentUser,
-  isLoading = false,
-}: AddShiftDialogProps) {
-  const [userId, setUserId] = useState(currentUser.id)
-  const [shiftTypeId, setShiftTypeId] = useState("")
+const AddShiftDialog: React.FC<AddShiftDialogProps> = ({ open, onClose, onShiftAdded }) => {
+  const { currentUser } = useAuth()
   const [startTime, setStartTime] = useState("")
   const [endTime, setEndTime] = useState("")
-  const [notes, setNotes] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState(
+    currentUser.role === "admin" || currentUser.role === "moderator" ? "" : currentUser.id,
+  )
+  const [users, setUsers] = useState([])
+  const [error, setError] = useState("")
 
-  // Reset form when dialog opens
   useEffect(() => {
-    if (isOpen) {
-      setUserId(currentUser.id)
-      setShiftTypeId("")
-      setStartTime("")
-      setEndTime("")
-      setNotes("")
-      setError(null)
-    }
-  }, [isOpen, currentUser.id])
-
-  // Precompila orari quando viene selezionato un tipo di turno
-  useEffect(() => {
-    if (shiftTypeId) {
-      const selectedShiftType = shiftTypes.find((type) => type.id === shiftTypeId)
-      if (selectedShiftType) {
-        setStartTime(selectedShiftType.start_time)
-        setEndTime(selectedShiftType.end_time)
+    const fetchUsers = async () => {
+      try {
+        const usersData = await getAllUsers()
+        setUsers(usersData)
+      } catch (error) {
+        console.error("Error fetching users:", error)
       }
     }
-  }, [shiftTypeId, shiftTypes])
 
-  const handleSave = async () => {
-    if (!userId || !shiftTypeId || !startTime || !endTime) {
-      setError("Tutti i campi sono obbligatori")
-      return
+    fetchUsers()
+  }, [])
+
+  const handleStartTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setStartTime(event.target.value)
+  }
+
+  const handleEndTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setEndTime(event.target.value)
+  }
+
+  const handleUserChange = (event: any) => {
+    setSelectedUserId(event.target.value)
+  }
+
+  const validateShift = () => {
+    if (!startTime || !endTime) {
+      setError("Please enter both start and end times.")
+      return false
     }
 
-    try {
-      const success = await onSave(userId, shiftTypeId, date, startTime, endTime, notes)
-      if (success) {
+    if (!selectedUserId) {
+      setError("Please select a user.")
+      return false
+    }
+
+    if (new Date(`2000-01-01T${endTime}`) <= new Date(`2000-01-01T${startTime}`)) {
+      setError("End time must be after start time.")
+      return false
+    }
+
+    if (currentUser.role !== "admin" && currentUser.role !== "moderator" && selectedUserId !== currentUser.id) {
+      setError("You can only create shifts for yourself.")
+      return false
+    }
+
+    setError("")
+    return true
+  }
+
+  const handleSubmit = async () => {
+    if (validateShift()) {
+      try {
+        await addShift(selectedUserId, startTime, endTime)
+        onShiftAdded()
         onClose()
+      } catch (err) {
+        console.error("Error adding shift:", err)
+        setError("Failed to add shift. Please try again.")
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Si è verificato un errore")
     }
   }
 
-  // Determina se l'utente corrente può selezionare altri utenti
-  const canSelectOtherUsers = currentUser.role === "admin" || currentUser.role === "moderator"
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Aggiungi Turno</DialogTitle>
-        </DialogHeader>
-
-        <div className="grid gap-4 py-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="user" className="text-right">
-              Utente
-            </Label>
-            <div className="col-span-3">
-              <Select value={userId} onValueChange={setUserId} disabled={!canSelectOtherUsers || isLoading}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona utente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {canSelectOtherUsers ? (
-                    users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value={currentUser.id}>{currentUser.name}</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="shift-type" className="text-right">
-              Tipo Turno
-            </Label>
-            <div className="col-span-3">
-              <Select value={shiftTypeId} onValueChange={setShiftTypeId} disabled={isLoading}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona tipo turno" />
-                </SelectTrigger>
-                <SelectContent>
-                  {shiftTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="start-time" className="text-right">
-              Ora Inizio
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="start-time"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="end-time" className="text-right">
-              Ora Fine
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="end-time"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="notes" className="text-right">
-              Note
-            </Label>
-            <div className="col-span-3">
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Note opzionali"
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
-            Annulla
-          </Button>
-          <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? "Salvataggio..." : "Salva"}
-          </Button>
-        </DialogFooter>
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>Add Shift</DialogTitle>
+      <DialogContent>
+        {error && <div style={{ color: "red", marginBottom: "10px" }}>{error}</div>}
+        <TextField
+          label="Start Time"
+          type="time"
+          fullWidth
+          margin="normal"
+          value={startTime}
+          onChange={handleStartTimeChange}
+          InputLabelProps={{
+            shrink: true,
+          }}
+        />
+        <TextField
+          label="End Time"
+          type="time"
+          fullWidth
+          margin="normal"
+          value={endTime}
+          onChange={handleEndTimeChange}
+          InputLabelProps={{
+            shrink: true,
+          }}
+        />
+        {(currentUser.role === "admin" || currentUser.role === "moderator") && (
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="user-select-label">User</InputLabel>
+            <Select
+              labelId="user-select-label"
+              id="user-select"
+              value={selectedUserId}
+              label="User"
+              onChange={handleUserChange}
+            >
+              {users.map((user) => (
+                <MenuItem key={user.id} value={user.id}>
+                  {user.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
       </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained" color="primary">
+          Add Shift
+        </Button>
+      </DialogActions>
     </Dialog>
   )
 }
+
+export default AddShiftDialog
