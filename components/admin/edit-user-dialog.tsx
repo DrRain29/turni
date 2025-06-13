@@ -129,6 +129,7 @@ export function EditUserDialog({ isOpen, user, onClose, onUserUpdated }: EditUse
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">Utente</SelectItem>
+                <SelectItem value="moderator">Moderatore</SelectItem>
                 <SelectItem value="admin">Amministratore</SelectItem>
               </SelectContent>
             </Select>

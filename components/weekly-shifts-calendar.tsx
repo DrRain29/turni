@@ -137,8 +137,8 @@ export function WeeklyShiftsCalendar({
   const canInteractWithDate = (date: Date) => {
     if (!isLoggedIn || !currentUser) return false
 
-    // Gli amministratori possono sempre interagire, anche con i giorni passati
-    if (currentUser.role === "admin") return true
+    // Gli amministratori e i moderatori possono sempre interagire, anche con i giorni passati
+    if (currentUser.role === "admin" || currentUser.role === "moderator") return true
 
     // Gli utenti normali possono interagire solo con giorni futuri o oggi
     return !isPast(date)
@@ -210,14 +210,14 @@ export function WeeklyShiftsCalendar({
 
   const canEditShift = (shift: Shift) => {
     if (!currentUser) return false
-    // Gli admin possono sempre modificare, gli utenti solo i propri turni
-    return currentUser.role === "admin" || shift.user_id === currentUser.id
+    // Gli admin e i moderatori possono sempre modificare, gli utenti solo i propri turni
+    return currentUser.role === "admin" || currentUser.role === "moderator" || shift.user_id === currentUser.id
   }
 
   const canDeleteShift = (shift: Shift) => {
     if (!currentUser) return false
-    // Gli admin possono sempre eliminare, gli utenti solo i propri turni
-    return currentUser.role === "admin" || shift.user_id === currentUser.id
+    // Gli admin e i moderatori possono sempre eliminare, gli utenti solo i propri turni
+    return currentUser.role === "admin" || currentUser.role === "moderator" || shift.user_id === currentUser.id
   }
 
   // VISTA MOBILE - Lista giornaliera

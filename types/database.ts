@@ -5,7 +5,7 @@ export interface User {
   username?: string // Make this optional since it doesn't exist in the database yet
   password_hash: string
   created_at: string
-  role: "user" | "admin"
+  role: "user" | "admin" | "moderator"
 }
 
 export interface VacationBooking {
@@ -54,7 +54,7 @@ export interface AuthUser {
   id: string
   email: string
   name: string
-  role: "user" | "admin"
+  role: "user" | "admin" | "moderator"
 }
 
 // Helper per identificare turni con orari fissi

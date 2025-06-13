@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Edit, Key, Trash2, MoreHorizontal, Shield, UserIcon } from "lucide-react"
+import { Edit, Key, Trash2, MoreHorizontal, Shield, UserIcon, UserCog } from "lucide-react"
 import type { User } from "@/types/database"
 
 interface UserListProps {
@@ -110,6 +110,14 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                     <Badge variant="destructive" className="flex items-center w-fit gap-1">
                       <Shield className="h-3 w-3" />
                       Admin
+                    </Badge>
+                  ) : user.role === "moderator" ? (
+                    <Badge
+                      variant="outline"
+                      className="flex items-center w-fit gap-1 bg-sky-100 text-sky-700 border-sky-200"
+                    >
+                      <UserCog className="h-3 w-3" />
+                      Mod
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="flex items-center w-fit gap-1">

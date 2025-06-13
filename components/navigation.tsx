@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
-import { Calendar, Clock, LogOut, Menu, X, Lock, BarChart3, LogIn, Shield } from "lucide-react"
+import { Calendar, Clock, LogOut, Menu, X, Lock, BarChart3, LogIn, Shield, UserCog } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -120,6 +120,12 @@ export function Navigation() {
                         Admin
                       </Badge>
                     )}
+                    {user.role === "moderator" && (
+                      <Badge variant="outline" className="ml-2 text-xs bg-sky-100 text-sky-700 border-sky-200">
+                        <UserCog className="h-3 w-3 mr-1" />
+                        Mod
+                      </Badge>
+                    )}
                   </span>
                   <div className="hidden sm:flex items-center gap-2">
                     <Button
@@ -193,6 +199,12 @@ export function Navigation() {
                     {user.role === "admin" && (
                       <Badge variant="destructive" className="ml-2 text-xs">
                         Admin
+                      </Badge>
+                    )}
+                    {user.role === "moderator" && (
+                      <Badge variant="outline" className="ml-2 text-xs bg-sky-100 text-sky-700 border-sky-200">
+                        <UserCog className="h-3 w-3 mr-1" />
+                        Mod
                       </Badge>
                     )}
                   </div>

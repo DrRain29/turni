@@ -59,6 +59,7 @@ async function canUserHaveFlexibleHours(supabase: any, userId: string): Promise<
   return FLEXIBLE_HOURS_USERS.includes(user.email)
 }
 
+// Modifica la funzione PUT per consentire ai moderatori di modificare i turni
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { user_id, shift_type_id, start_time, end_time, notes, current_user_id, current_user_role } =
@@ -85,15 +86,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Turno non trovato" }, { status: 404 })
     }
 
-    // Controlla i permessi: admin può modificare tutto, user solo i propri turni
-    const canEdit = current_user_role === "admin" || existingShift.user_id === current_user_id
+    // Controlla i permessi: admin e moderator possono modificare tutto, user solo i propri turni
+    const canEdit =
+      current_user_role === "admin" || current_user_role === "moderator" || existingShift.user_id === current_user_id
 
     if (!canEdit) {
       return NextResponse.json({ error: "Non hai i permessi per modificare questo turno" }, { status: 403 })
     }
 
-    // Se non è admin, può modificare solo i propri turni (non può cambiare utente)
-    const finalUserId = current_user_role === "admin" ? user_id : existingShift.user_id
+    // Se non è admin o moderator, può modificare solo i propri turni (non può cambiare utente)
+    const finalUserId =
+      current_user_role === "admin" || current_user_role === "moderator" ? user_id : existingShift.user_id
 
     // Calcola le ore del nuovo turno
     const newShiftHours = calculateShiftHours(start_time, end_time)
@@ -208,6 +211,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
+// Modifica la funzione DELETE per consentire ai moderatori di eliminare i turni
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { searchParams } = new URL(request.url)
@@ -231,8 +235,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: "Turno non trovato" }, { status: 404 })
     }
 
-    // Controlla i permessi: admin può eliminare tutto, user solo i propri turni
-    const canDelete = currentUserRole === "admin" || shift.user_id === currentUserId
+    // Controlla i permessi: admin e moderator possono eliminare tutto, user solo i propri turni
+    const canDelete = currentUserRole === "admin" || currentUserRole === "moderator" || shift.user_id === currentUserId
 
     if (!canDelete) {
       return NextResponse.json({ error: "Non hai i permessi per eliminare questo turno" }, { status: 403 })
