@@ -129,7 +129,7 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 focus:ring-0 focus:ring-offset-0">
                         <span className="sr-only">Apri menu</span>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
@@ -137,12 +137,15 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Azioni</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => onEdit(user)} className="flex items-center gap-2 cursor-pointer">
+                      <DropdownMenuItem
+                        onSelect={() => onEdit(user)}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
                         <Edit className="h-4 w-4" />
                         Modifica
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => onChangePassword(user)}
+                        onSelect={() => onChangePassword(user)}
                         className="flex items-center gap-2 cursor-pointer"
                       >
                         <Key className="h-4 w-4" />
@@ -150,7 +153,7 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => onDelete(user)}
+                        onSelect={() => onDelete(user)}
                         className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />

@@ -1023,8 +1023,4 @@ export function WeeklyShiftsCalendar({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    handleEditShift(shift)
-                                  }}
-                                  className="text-blue-500 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100 transition-colors"
-                                  title="Modifica turno"\
-                                >ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)ift(shift)
+                                    handleEditSh
