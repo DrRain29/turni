@@ -2,21 +2,18 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-} from "@mui/material"
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from "@mui/material"
 import { useAuth } from "../contexts/AuthContext"
 import { addShift } from "../firebase/firestore"
 import { getAllUsers } from "../firebase/firestore"
+import { Label } from "@/components/ui/label"
+import {
+  Select as SelectComponent,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface AddShiftDialogProps {
   open: boolean
@@ -125,22 +122,21 @@ const AddShiftDialog: React.FC<AddShiftDialogProps> = ({ open, onClose, onShiftA
           }}
         />
         {(currentUser.role === "admin" || currentUser.role === "moderator") && (
-          <FormControl fullWidth margin="normal">
-            <InputLabel id="user-select-label">User</InputLabel>
-            <Select
-              labelId="user-select-label"
-              id="user-select"
-              value={selectedUserId}
-              label="User"
-              onChange={handleUserChange}
-            >
-              {users.map((user) => (
-                <MenuItem key={user.id} value={user.id}>
-                  {user.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <div>
+            <Label htmlFor="user-select">Dipendente</Label>
+            <SelectComponent value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona dipendente" />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </SelectComponent>
+          </div>
         )}
       </DialogContent>
       <DialogActions>
