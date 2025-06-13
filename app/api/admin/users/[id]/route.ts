@@ -4,16 +4,21 @@ import { createServerClient } from "@/lib/supabase"
 // GET - Ottieni un utente specifico
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
+    const { id } = params
     const supabase = createServerClient()
 
     const { data: user, error } = await supabase
       .from("users")
       .select("id, name, email, role, created_at")
-      .eq("id", params.id)
+      .eq("id", id)
       .single()
 
     if (error) {
       console.error("Error fetching user:", error)
+      return NextResponse.json({ error: "Errore nel caricamento dell'utente" }, { status: 500 })
+    }
+
+    if (!user) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
     }
 
@@ -27,55 +32,63 @@ export async function GET(request: Request, { params }: { params: { id: string }
 // PUT - Aggiorna un utente
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
+    const { id } = params
     const { name, email, role } = await request.json()
 
     // Validazione
     if (!name || !email) {
-      return NextResponse.json({ error: "Nome e email sono obbligatori" }, { status: 400 })
+      return NextResponse.json({ error: "Nome e email sono campi obbligatori" }, { status: 400 })
     }
 
     const supabase = createServerClient()
 
     // Verifica se l'utente esiste
-    const { data: existingUser, error: checkError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("id", params.id)
-      .single()
+    const { data: existingUser, error: checkError } = await supabase.from("users").select("id").eq("id", id).single()
 
     if (checkError || !existingUser) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
     }
 
     // Verifica se l'email è già in uso da un altro utente
-    const { data: emailUser, error: emailError } = await supabase
+    const { data: emailCheck, error: emailCheckError } = await supabase
       .from("users")
       .select("id")
       .eq("email", email)
-      .neq("id", params.id) // Escludi l'utente corrente
+      .neq("id", id) // Esclude l'utente corrente
       .maybeSingle()
 
-    if (emailError) {
+    if (emailCheckError) {
       return NextResponse.json({ error: "Errore nella verifica dell'email" }, { status: 500 })
     }
 
-    if (emailUser) {
+    if (emailCheck) {
       return NextResponse.json({ error: "Email già in uso da un altro utente" }, { status: 400 })
     }
 
-    // Aggiorna l'utente (senza username per ora)
+    // Aggiorna l'utente
     const { data, error } = await supabase
       .from("users")
       .update({
         name,
         email,
-        role: role || "user", // Default a "user" se non specificato
+        role,
       })
-      .eq("id", params.id)
+      .eq("id", id)
       .select("id, name, email, role, created_at")
 
     if (error) {
       console.error("Error updating user:", error)
+
+      // Gestione specifica dell'errore di vincolo
+      if (error.message && error.message.includes("violates check constraint")) {
+        return NextResponse.json(
+          {
+            error: "Il ruolo specificato non è valido. È necessario eseguire lo script SQL per aggiornare il database.",
+          },
+          { status: 400 },
+        )
+      }
+
       return NextResponse.json({ error: "Errore nell'aggiornamento dell'utente" }, { status: 500 })
     }
 
@@ -89,21 +102,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 // DELETE - Elimina un utente
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
+    const { id } = params
     const supabase = createServerClient()
 
     // Verifica se l'utente esiste
-    const { data: existingUser, error: checkError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("id", params.id)
-      .single()
+    const { data: existingUser, error: checkError } = await supabase.from("users").select("id").eq("id", id).single()
 
     if (checkError || !existingUser) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
     }
 
     // Elimina l'utente
-    const { error } = await supabase.from("users").delete().eq("id", params.id)
+    const { error } = await supabase.from("users").delete().eq("id", id)
 
     if (error) {
       console.error("Error deleting user:", error)

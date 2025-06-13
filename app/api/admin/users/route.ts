@@ -59,31 +59,30 @@ export async function POST(request: Request) {
     // In produzione, usa bcrypt o un altro algoritmo di hashing
     const password_hash = password // In produzione: await bcrypt.hash(password, 10)
 
-    // Gestione temporanea del ruolo "moderator"
-    // Se il ruolo è "moderator", lo salviamo come "user" nel database
-    // ma aggiungiamo un campo "is_moderator" per tracciare che è un moderatore
-    let actualRole = role
-    let is_moderator = false
-
-    if (role === "moderator") {
-      actualRole = "user" // Salviamo come "user" per evitare l'errore di vincolo
-      is_moderator = true // Aggiungiamo un flag per tracciare che è un moderatore
-    }
-
-    // Crea il nuovo utente
+    // Crea il nuovo utente con il ruolo specificato
     const { data, error } = await supabase
       .from("users")
       .insert({
         name,
         email,
         password_hash,
-        role: actualRole, // Usiamo actualRole invece di role
-        is_moderator, // Aggiungiamo il campo is_moderator
+        role: role || "user", // Usa direttamente il ruolo specificato
       })
-      .select("id, name, email, role, created_at, is_moderator")
+      .select("id, name, email, role, created_at")
 
     if (error) {
       console.error("Error creating user:", error)
+
+      // Gestione specifica dell'errore di vincolo
+      if (error.message && error.message.includes("violates check constraint")) {
+        return NextResponse.json(
+          {
+            error: "Il ruolo specificato non è valido. È necessario eseguire lo script SQL per aggiornare il database.",
+          },
+          { status: 400 },
+        )
+      }
+
       return NextResponse.json({ error: "Errore nella creazione dell'utente" }, { status: 500 })
     }
 
