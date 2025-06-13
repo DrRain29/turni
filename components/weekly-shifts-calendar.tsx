@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, Star, ArrowRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, Plus, Edit, Trash2, Star, ArrowRight, Shield } from "lucide-react"
 import type { Shift, ShiftType, User } from "@/types/database"
 import { cn } from "@/lib/utils"
 import { AddShiftDialog } from "./add-shift-dialog"
@@ -220,6 +220,9 @@ export function WeeklyShiftsCalendar({
     return currentUser.role === "admin" || currentUser.role === "moderator" || shift.user_id === currentUser.id
   }
 
+  // Determina se l'utente ha permessi avanzati (admin o moderatore)
+  const hasAdvancedPermissions = currentUser?.role === "admin" || currentUser?.role === "moderator"
+
   // VISTA MOBILE - Lista giornaliera
   if (isMobile) {
     // Funzione per organizzare i turni del giorno secondo l'ordine richiesto
@@ -375,6 +378,12 @@ export function WeeklyShiftsCalendar({
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Clock className="h-5 w-5" />
                 Turni Settimanali
+                {hasAdvancedPermissions && (
+                  <Badge variant="outline" className="ml-1 bg-blue-50 text-blue-700 border-blue-200">
+                    <Shield className="h-3 w-3 mr-1" />
+                    {currentUser?.role === "admin" ? "Admin" : "Moderatore"}
+                  </Badge>
+                )}
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={previousWeek}>
@@ -432,7 +441,7 @@ export function WeeklyShiftsCalendar({
                             Completato
                           </Badge>
                         )}
-                        {isPastDay && currentUser?.role === "admin" && (
+                        {isPastDay && hasAdvancedPermissions && (
                           <Badge variant="outline" className="ml-2 text-xs text-gray-600 border-gray-300 bg-gray-100">
                             Modificabile
                           </Badge>
@@ -442,7 +451,11 @@ export function WeeklyShiftsCalendar({
                     </div>
                     <Button variant="outline" size="sm" onClick={() => handleAddShift(formatDate(day))} className="h-9">
                       <Plus className="h-4 w-4 mr-1" />
-                      {isPastDay ? "Aggiungi (Passato)" : "Aggiungi"}
+                      {hasAdvancedPermissions ? (
+                        isPastDay ? "Aggiungi (Passato)" : "Aggiungi Turno"
+                      ) : (
+                        "Mio Turno"
+                      )}
                     </Button>
                   </div>
 
@@ -838,6 +851,12 @@ export function WeeklyShiftsCalendar({
             <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
               <Clock className="h-4 w-4 md:h-5 md:w-5" />
               Turni Settimanali
+              {hasAdvancedPermissions && (
+                <Badge variant="outline" className="ml-1 bg-blue-50 text-blue-700 border-blue-200">
+                  <Shield className="h-3 w-3 mr-1" />
+                  {currentUser?.role === "admin" ? "Admin" : "Moderatore"}
+                </Badge>
+              )}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={previousWeek}>
@@ -901,7 +920,7 @@ export function WeeklyShiftsCalendar({
                     >
                       {formatDisplayDate(day)}
                     </div>
-                    {isPastDay && currentUser?.role === "admin" && (
+                    {isPastDay && hasAdvancedPermissions && (
                       <Badge variant="outline" className="text-xs text-gray-600 mt-1 border-gray-300 bg-gray-100">
                         Passato
                       </Badge>
@@ -920,7 +939,7 @@ export function WeeklyShiftsCalendar({
                       >
                         <Plus className="h-2 w-2 md:h-3 md:w-3 mr-1" />
                         <span className="hidden md:inline">
-                          {currentUser?.role === "admin" ? "Aggiungi" : "Mio Turno"}
+                          {hasAdvancedPermissions ? "Aggiungi Turno" : "Mio Turno"}
                         </span>
                         <span className="md:hidden">+</span>
                       </Button>
@@ -960,7 +979,7 @@ export function WeeklyShiftsCalendar({
                   <div className="text-center mb-1 md:mb-2 pb-1 border-b border-gray-200">
                     <div className="font-medium text-xs text-gray-600">{dayNamesShort[index]}</div>
                     <div className="text-xs md:text-sm font-bold text-gray-500">{formatDisplayDate(day)}</div>
-                    {isPastDay && currentUser?.role === "admin" && (
+                    {isPastDay && hasAdvancedPermissions && (
                       <Badge variant="outline" className="text-xs text-gray-600 mt-1 border-gray-300 bg-gray-100">
                         Passato
                       </Badge>
@@ -1004,80 +1023,4 @@ export function WeeklyShiftsCalendar({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    handleEditShift(shift)
-                                  }}
-                                  className="text-blue-500 hover:text-blue-700 p-0.5 rounded hover:bg-blue-100 transition-colors"
-                                  title="Modifica turno"
-                                >
-                                  <Edit className="h-2 w-2 md:h-3 md:w-3" />
-                                </button>
-                              )}
-                              {canDeleteShift(shift) && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDeleteShift(shift.id)
-                                  }}
-                                  className="text-red-500 hover:text-red-700 p-0.5 rounded hover:bg-red-100 transition-colors"
-                                  title="Elimina turno"
-                                >
-                                  <Trash2 className="h-2 w-2 md:h-3 md:w-3" />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-
-                    {canInteract && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-xs h-5 md:h-6 border-dashed border-2 hover:border-orange-300 hover:bg-orange-50"
-                        onClick={() => handleAddShift(formatDate(day))}
-                      >
-                        <Plus className="h-2 w-2 md:h-2.5 md:w-2.5 mr-1" />
-                        <span className="hidden md:inline">Aeroporto</span>
-                        <span className="md:hidden">✈️</span>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {currentUser && (
-        <AddShiftDialog
-          isOpen={showAddDialog}
-          onClose={() => setShowAddDialog(false)}
-          onSave={handleAddShiftSave}
-          date={selectedDate}
-          shiftTypes={shiftTypes}
-          users={users}
-          currentUser={currentUser}
-          isLoading={isAddingShift}
-        />
-      )}
-
-      {currentUser && (
-        <EditShiftDialog
-          isOpen={showEditDialog}
-          onClose={() => {
-            setShowEditDialog(false)
-            setEditingShift(null)
-          }}
-          onSave={handleEditShiftSave}
-          shift={editingShift}
-          shiftTypes={shiftTypes}
-          users={users}
-          currentUser={currentUser}
-          isLoading={isEditingShift}
-        />
-      )}
-    </div>
-  )
-}
+                                    handleEditSh
