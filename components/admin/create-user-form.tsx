@@ -142,7 +142,6 @@ export function CreateUserForm({ onUserCreated }: CreateUserFormProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="user">Utente</SelectItem>
-              <SelectItem value="moderator">Moderatore</SelectItem>
               <SelectItem value="admin">Amministratore</SelectItem>
             </SelectContent>
           </Select>
