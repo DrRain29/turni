@@ -152,39 +152,39 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                   {isOpen && (
                     <div
                       ref={menuRef}
-                      className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
+                      className="absolute right-0 mt-2 w-44 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
                     >
                       <div className="py-1">
-                        <div className="px-4 py-2 text-sm text-gray-700 font-medium border-b">Azioni</div>
+                        <div className="px-3 py-1.5 text-xs text-gray-700 font-medium border-b">Azioni</div>
                         <button
-                          className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          className="flex items-center w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
                           onClick={() => {
                             setOpenMenuId(null)
                             onEdit(user)
                           }}
                         >
-                          <Edit className="h-4 w-4 mr-2" />
+                          <Edit className="h-3 w-3 mr-1.5" />
                           Modifica
                         </button>
                         <button
-                          className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          className="flex items-center w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
                           onClick={() => {
                             setOpenMenuId(null)
                             onChangePassword(user)
                           }}
                         >
-                          <Key className="h-4 w-4 mr-2" />
+                          <Key className="h-3 w-3 mr-1.5" />
                           Cambia Password
                         </button>
-                        <div className="border-t my-1"></div>
+                        <div className="border-t my-0.5"></div>
                         <button
-                          className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                          className="flex items-center w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-gray-100"
                           onClick={() => {
                             setOpenMenuId(null)
                             onDelete(user)
                           }}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
+                          <Trash2 className="h-3 w-3 mr-1.5" />
                           Elimina
                         </button>
                       </div>
