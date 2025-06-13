@@ -77,7 +77,9 @@ const WeeklyShiftsCalendar: React.FC<WeeklyShiftsCalendarProps> = ({
                 return (
                   <li key={shift.id}>
                     {user?.name}
-                    {currentUser?.role === "admin" && <button onClick={() => onShiftRemove(shift.id)}>Remove</button>}
+                    {(currentUser.role === "admin" || currentUser.role === "moderator") && (
+                      <button onClick={() => onShiftRemove(shift.id)}>Remove</button>
+                    )}
                   </li>
                 )
               })}
