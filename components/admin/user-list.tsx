@@ -1,9 +1,18 @@
 "use client"
 
+import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Edit, Key, Trash2, Shield, UserIcon, UserCog } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Edit, Key, Trash2, MoreHorizontal, Shield, UserIcon, UserCog } from "lucide-react"
 import type { User } from "@/types/database"
 
 interface UserListProps {
@@ -16,6 +25,9 @@ interface UserListProps {
 }
 
 export function UserList({ users, isLoading, error, onEdit, onChangePassword, onDelete }: UserListProps) {
+  // Stato per tenere traccia del menu aperto
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
   if (isLoading) {
     return (
       <div className="text-center py-8">
@@ -61,6 +73,22 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
     return emailToUsernameMap[email] || null
   }
 
+  // Funzioni per gestire le azioni
+  const handleEdit = (user: User) => {
+    setOpenMenuId(null)
+    onEdit(user)
+  }
+
+  const handleChangePassword = (user: User) => {
+    setOpenMenuId(null)
+    onChangePassword(user)
+  }
+
+  const handleDelete = (user: User) => {
+    setOpenMenuId(null)
+    onDelete(user)
+  }
+
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -77,6 +105,7 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
           {users.map((user) => {
             const legacyUsername = getLegacyUsername(user.email)
             const isLegacyUser = legacyUsers.includes(user.email)
+            const isOpen = openMenuId === user.id
 
             return (
               <TableRow key={user.id}>
@@ -119,38 +148,40 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => onEdit(user)}
-                      title="Modifica"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Modifica</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => onChangePassword(user)}
-                      title="Cambia Password"
-                    >
-                      <Key className="h-4 w-4" />
-                      <span className="sr-only">Cambia Password</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => onDelete(user)}
-                      title="Elimina"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Elimina</span>
-                    </Button>
-                  </div>
+                  <DropdownMenu open={isOpen} onOpenChange={(open) => setOpenMenuId(open ? user.id : null)}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <span className="sr-only">Apri menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="z-50">
+                      <DropdownMenuLabel>Azioni</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 cursor-pointer"
+                        onClick={() => handleEdit(user)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        Modifica
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 cursor-pointer"
+                        onClick={() => handleChangePassword(user)}
+                      >
+                        <Key className="h-4 w-4" />
+                        Cambia Password
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
+                        onClick={() => handleDelete(user)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Elimina
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             )
