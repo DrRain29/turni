@@ -59,6 +59,17 @@ export async function POST(request: Request) {
     // In produzione, usa bcrypt o un altro algoritmo di hashing
     const password_hash = password // In produzione: await bcrypt.hash(password, 10)
 
+    // Gestione temporanea del ruolo "moderator"
+    // Se il ruolo è "moderator", lo salviamo come "user" nel database
+    // ma aggiungiamo un campo "is_moderator" per tracciare che è un moderatore
+    let actualRole = role
+    let is_moderator = false
+
+    if (role === "moderator") {
+      actualRole = "user" // Salviamo come "user" per evitare l'errore di vincolo
+      is_moderator = true // Aggiungiamo un flag per tracciare che è un moderatore
+    }
+
     // Crea il nuovo utente
     const { data, error } = await supabase
       .from("users")
@@ -66,9 +77,10 @@ export async function POST(request: Request) {
         name,
         email,
         password_hash,
-        role: role || "user", // Default a "user" se non specificato
+        role: actualRole, // Usiamo actualRole invece di role
+        is_moderator, // Aggiungiamo il campo is_moderator
       })
-      .select("id, name, email, role, created_at")
+      .select("id, name, email, role, created_at, is_moderator")
 
     if (error) {
       console.error("Error creating user:", error)
