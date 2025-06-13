@@ -3,15 +3,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Edit, Key, Trash2, MoreHorizontal, Shield, UserIcon, UserCog } from "lucide-react"
+import { Edit, Key, Trash2, Shield, UserIcon, UserCog } from "lucide-react"
 import type { User } from "@/types/database"
 
 interface UserListProps {
@@ -127,40 +119,38 @@ export function UserList({ users, isLoading, error, onEdit, onChangePassword, on
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 focus:ring-0 focus:ring-offset-0">
-                        <span className="sr-only">Apri menu</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Azioni</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onSelect={() => onEdit(user)}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Modifica
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => onChangePassword(user)}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <Key className="h-4 w-4" />
-                        Cambia Password
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onSelect={() => onDelete(user)}
-                        className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Elimina
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onEdit(user)}
+                      title="Modifica"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span className="sr-only">Modifica</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onChangePassword(user)}
+                      title="Cambia Password"
+                    >
+                      <Key className="h-4 w-4" />
+                      <span className="sr-only">Cambia Password</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => onDelete(user)}
+                      title="Elimina"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Elimina</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             )
