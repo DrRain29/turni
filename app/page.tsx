@@ -187,7 +187,7 @@ export default function HomePage() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="font-medium text-blue-900">Informazioni</h3>
             <p className="text-blue-800 text-sm mt-1">
-              Puoi gestire i tuoi turni. Solo gli amministratori possono modificare i turni di altri colleghi.
+              Puoi gestire i tuoi turni. Solo gli amministratori e i moderatorpossono modificare i turni di altri colleghi.
             </p>
           </div>
         )}
