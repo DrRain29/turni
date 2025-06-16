@@ -32,7 +32,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const { user_id, user_role, start_date, end_date, notes, target_user_id } = await request.json()
-    console.log("POST /api/vacations - Received request:", { user_id, user_role, target_user_id })
+    console.log("POST /api/vacations - Received request:", { user_id, user_role, target_user_id, start_date, end_date })
 
     const supabase = createServerClient()
 
@@ -55,10 +55,42 @@ export async function POST(request: NextRequest) {
       console.log(`Admin ${user_id} creating vacation for user ${target_user_id}`)
     }
 
-    // Controlla sovrapposizioni per l'utente finale
+    // DEBUG: Controlla TUTTE le prenotazioni per questo utente per capire cosa c'è nel database
+    const { data: allBookings, error: debugError } = await supabase
+      .from("vacation_bookings")
+      .select(`
+        *,
+        users (
+          name,
+          email
+        )
+      `)
+      .eq("user_id", finalUserId)
+      .order("start_date", { ascending: true })
+
+    if (!debugError && allBookings) {
+      console.log(
+        `DEBUG: All bookings for user ${finalUserId}:`,
+        allBookings.map((b) => ({
+          id: b.id,
+          start_date: b.start_date,
+          end_date: b.end_date,
+          status: b.status,
+          user_name: b.users?.name,
+        })),
+      )
+    }
+
+    // Controlla sovrapposizioni per l'utente finale - SOLO status "confirmed"
     const { data: overlapping, error: checkError } = await supabase
       .from("vacation_bookings")
-      .select("*")
+      .select(`
+        *,
+        users (
+          name,
+          email
+        )
+      `)
       .eq("user_id", finalUserId)
       .eq("status", "confirmed")
       .or(`start_date.lte.${end_date},end_date.gte.${start_date}`)
@@ -68,14 +100,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Errore nella verifica" }, { status: 500 })
     }
 
+    console.log(
+      `DEBUG: Overlapping confirmed bookings:`,
+      overlapping?.map((b) => ({
+        id: b.id,
+        start_date: b.start_date,
+        end_date: b.end_date,
+        status: b.status,
+        user_name: b.users?.name,
+      })),
+    )
+
     if (overlapping && overlapping.length > 0) {
       // Ottieni il nome dell'utente per il messaggio di errore
       const { data: targetUser } = await supabase.from("users").select("name").eq("id", finalUserId).single()
 
       const userName = targetUser?.name || "L'utente"
+      const conflictDetails = overlapping.map((v) => `${v.start_date} - ${v.end_date} (${v.users?.name})`).join(", ")
+
+      console.log(`CONFLICT: ${userName} has overlapping vacations: ${conflictDetails}`)
+
       return NextResponse.json(
         {
-          error: `${userName} ha già delle ferie prenotate in questo periodo`,
+          error: `${userName} ha già delle ferie prenotate in questo periodo: ${conflictDetails}`,
         },
         { status: 400 },
       )
