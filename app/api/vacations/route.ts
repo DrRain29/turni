@@ -39,49 +39,26 @@ export async function POST(request: NextRequest) {
     // Determina l'ID utente finale per cui creare le ferie
     let finalUserId = user_id
 
-    // Se è specificato target_user_id, verifica che l'utente corrente sia admin
+    // Se è specificato target_user_id, verifica che l'utente corrente sia admin o moderator
     if (target_user_id && target_user_id !== user_id) {
       // Verifica direttamente il ruolo passato dal client
-      if (user_role !== "admin") {
+      if (user_role !== "admin" && user_role !== "moderator") {
         console.log(
-          `User ${user_id} (role: ${user_role}) tried to create vacation for ${target_user_id} but is not admin`,
+          `User ${user_id} (role: ${user_role}) tried to create vacation for ${target_user_id} but is not admin/moderator`,
         )
         return NextResponse.json(
-          { error: "Solo gli amministratori possono creare ferie per altri utenti" },
+          { error: "Solo gli amministratori e i moderatori possono creare ferie per altri utenti" },
           { status: 403 },
         )
       }
       finalUserId = target_user_id
-      console.log(`Admin ${user_id} creating vacation for user ${target_user_id}`)
+      console.log(`${user_role} ${user_id} creating vacation for user ${target_user_id}`)
     }
 
-    // DEBUG: Controlla TUTTE le prenotazioni per questo utente per capire cosa c'è nel database
-    const { data: allBookings, error: debugError } = await supabase
-      .from("vacation_bookings")
-      .select(`
-        *,
-        users (
-          name,
-          email
-        )
-      `)
-      .eq("user_id", finalUserId)
-      .order("start_date", { ascending: true })
-
-    if (!debugError && allBookings) {
-      console.log(
-        `DEBUG: All bookings for user ${finalUserId}:`,
-        allBookings.map((b) => ({
-          id: b.id,
-          start_date: b.start_date,
-          end_date: b.end_date,
-          status: b.status,
-          user_name: b.users?.name,
-        })),
-      )
-    }
-
-    // Controlla sovrapposizioni per l'utente finale - SOLO status "confirmed"
+    // CORREZIONE: Controlla sovrapposizioni REALI per l'utente finale
+    // Due intervalli si sovrappongono se:
+    // - L'inizio del nuovo intervallo è prima della fine dell'esistente E
+    // - La fine del nuovo intervallo è dopo l'inizio dell'esistente
     const { data: overlapping, error: checkError } = await supabase
       .from("vacation_bookings")
       .select(`
@@ -93,7 +70,8 @@ export async function POST(request: NextRequest) {
       `)
       .eq("user_id", finalUserId)
       .eq("status", "confirmed")
-      .or(`start_date.lte.${end_date},end_date.gte.${start_date}`)
+      .lte("start_date", end_date)
+      .gte("end_date", start_date)
 
     if (checkError) {
       console.error("Error checking overlaps:", checkError)
@@ -101,7 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(
-      `DEBUG: Overlapping confirmed bookings:`,
+      `DEBUG: Checking overlaps for ${start_date} to ${end_date}:`,
       overlapping?.map((b) => ({
         id: b.id,
         start_date: b.start_date,
@@ -116,13 +94,18 @@ export async function POST(request: NextRequest) {
       const { data: targetUser } = await supabase.from("users").select("name").eq("id", finalUserId).single()
 
       const userName = targetUser?.name || "L'utente"
-      const conflictDetails = overlapping.map((v) => `${v.start_date} - ${v.end_date} (${v.users?.name})`).join(", ")
+      const conflictDetails = overlapping
+        .map(
+          (v) =>
+            `${new Date(v.start_date).toLocaleDateString("it-IT")} - ${new Date(v.end_date).toLocaleDateString("it-IT")}`,
+        )
+        .join(", ")
 
-      console.log(`CONFLICT: ${userName} has overlapping vacations: ${conflictDetails}`)
+      console.log(`REAL CONFLICT: ${userName} has overlapping vacations: ${conflictDetails}`)
 
       return NextResponse.json(
         {
-          error: `${userName} ha già delle ferie prenotate in questo periodo: ${conflictDetails}`,
+          error: `${userName} ha già delle ferie che si sovrappongono in questo periodo: ${conflictDetails}`,
         },
         { status: 400 },
       )
@@ -153,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     // Log dell'operazione
     if (finalUserId !== user_id) {
-      console.log(`Admin ${user_id} successfully created vacation for user ${finalUserId}`)
+      console.log(`${user_role} ${user_id} successfully created vacation for user ${finalUserId}`)
     }
 
     return NextResponse.json(data[0])
