@@ -36,9 +36,8 @@ export function DeleteUserDialog({ user, open, onOpenChange, onSuccess }: Delete
         method: "DELETE",
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
+        const data = await response.json()
         throw new Error(data.error || "Failed to delete user")
       }
 
@@ -47,20 +46,7 @@ export function DeleteUserDialog({ user, open, onOpenChange, onSuccess }: Delete
       onOpenChange(false)
     } catch (error) {
       console.error("Error deleting user:", error)
-
-      let errorMessage = "Failed to delete user"
-      if (error instanceof Error) {
-        if (error.message.includes("foreign key constraint")) {
-          errorMessage =
-            "Cannot delete user: they have associated data (shifts, etc.). Please remove their data first or contact support."
-        } else if (error.message.includes("admin")) {
-          errorMessage = "Cannot delete admin users"
-        } else {
-          errorMessage = error.message
-        }
-      }
-
-      toast.error(errorMessage)
+      toast.error(error instanceof Error ? error.message : "Failed to delete user")
     } finally {
       setIsDeleting(false)
     }
@@ -75,13 +61,8 @@ export function DeleteUserDialog({ user, open, onOpenChange, onSuccess }: Delete
             Delete User
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete <span className="font-semibold">{user.name || user.email}</span>?
-            <br />
-            <br />
-            <span className="text-destructive font-medium">
-              This action cannot be undone. This will permanently delete the user and all associated data including
-              shifts they created.
-            </span>
+            Are you sure you want to delete <span className="font-semibold">{user.name || user.email}</span>? This
+            action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -97,10 +78,7 @@ export function DeleteUserDialog({ user, open, onOpenChange, onSuccess }: Delete
                 Deleting...
               </>
             ) : (
-              <>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete User
-              </>
+              "Delete"
             )}
           </AlertDialogAction>
         </AlertDialogFooter>
