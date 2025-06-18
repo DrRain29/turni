@@ -16,6 +16,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting user:", error)
+    if (error.message.includes("foreign key constraint")) {
+      return NextResponse.json(
+        {
+          error: "Cannot delete user: they have associated shifts. Please remove their shifts first.",
+        },
+        { status: 400 },
+      )
+    }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
