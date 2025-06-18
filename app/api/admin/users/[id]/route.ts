@@ -1,128 +1,108 @@
-import { NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase"
+import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
 
-// GET - Ottieni un utente specifico
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = params
-    const supabase = createServerClient()
+    const supabase = createClient()
+    const userId = params.id
 
-    const { data: user, error } = await supabase
+    // First, check if the user exists
+    const { data: user, error: fetchError } = await supabase
       .from("users")
-      .select("id, name, email, role, created_at")
-      .eq("id", id)
+      .select("id, email, role")
+      .eq("id", userId)
       .single()
 
-    if (error) {
-      console.error("Error fetching user:", error)
-      return NextResponse.json({ error: "Errore nel caricamento dell'utente" }, { status: 500 })
+    if (fetchError || !user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
+    // Prevent deletion of admin users (optional safety check)
+    if (user.role === "admin") {
+      return NextResponse.json({ error: "Cannot delete admin users" }, { status: 403 })
     }
 
-    return NextResponse.json(user)
-  } catch (error) {
-    console.error("API error:", error)
-    return NextResponse.json({ error: "Errore del server" }, { status: 500 })
-  }
-}
+    // Option 1: If you've updated the foreign key constraints with CASCADE,
+    // this simple delete should work:
+    const { error: deleteError } = await supabase.from("users").delete().eq("id", userId)
 
-// PUT - Aggiorna un utente
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const { id } = params
-    const { name, email, role } = await request.json()
+    if (deleteError) {
+      console.error("Error deleting user:", deleteError)
 
-    // Validazione
-    if (!name || !email) {
-      return NextResponse.json({ error: "Nome e email sono campi obbligatori" }, { status: 400 })
-    }
-
-    const supabase = createServerClient()
-
-    // Verifica se l'utente esiste
-    const { data: existingUser, error: checkError } = await supabase.from("users").select("id").eq("id", id).single()
-
-    if (checkError || !existingUser) {
-      return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
-    }
-
-    // Verifica se l'email è già in uso da un altro utente
-    const { data: emailCheck, error: emailCheckError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .neq("id", id) // Esclude l'utente corrente
-      .maybeSingle()
-
-    if (emailCheckError) {
-      return NextResponse.json({ error: "Errore nella verifica dell'email" }, { status: 500 })
-    }
-
-    if (emailCheck) {
-      return NextResponse.json({ error: "Email già in uso da un altro utente" }, { status: 400 })
-    }
-
-    // Aggiorna l'utente
-    const { data, error } = await supabase
-      .from("users")
-      .update({
-        name,
-        email,
-        role,
-      })
-      .eq("id", id)
-      .select("id, name, email, role, created_at")
-
-    if (error) {
-      console.error("Error updating user:", error)
-
-      // Gestione specifica dell'errore di vincolo
-      if (error.message && error.message.includes("violates check constraint")) {
-        return NextResponse.json(
-          {
-            error: "Il ruolo specificato non è valido. È necessario eseguire lo script SQL per aggiornare il database.",
-          },
-          { status: 400 },
-        )
+      // If we still get a foreign key constraint error, handle it manually
+      if (deleteError.message.includes("foreign key constraint")) {
+        return await handleManualDeletion(supabase, userId)
       }
 
-      return NextResponse.json({ error: "Errore nell'aggiornamento dell'utente" }, { status: 500 })
-    }
-
-    return NextResponse.json(data[0])
-  } catch (error) {
-    console.error("API error:", error)
-    return NextResponse.json({ error: "Errore del server" }, { status: 500 })
-  }
-}
-
-// DELETE - Elimina un utente
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const { id } = params
-    const supabase = createServerClient()
-
-    // Verifica se l'utente esiste
-    const { data: existingUser, error: checkError } = await supabase.from("users").select("id").eq("id", id).single()
-
-    if (checkError || !existingUser) {
-      return NextResponse.json({ error: "Utente non trovato" }, { status: 404 })
-    }
-
-    // Elimina l'utente
-    const { error } = await supabase.from("users").delete().eq("id", id)
-
-    if (error) {
-      console.error("Error deleting user:", error)
-      return NextResponse.json({ error: "Errore nell'eliminazione dell'utente" }, { status: 500 })
+      return NextResponse.json({ error: "Failed to delete user" }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("API error:", error)
-    return NextResponse.json({ error: "Errore del server" }, { status: 500 })
+    console.error("Error deleting user:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+// Fallback function for manual deletion if CASCADE isn't set up
+async function handleManualDeletion(supabase: any, userId: string) {
+  try {
+    // Start a transaction-like approach by handling related records first
+
+    // Option A: Delete all shifts created by this user
+    const { error: shiftsError } = await supabase.from("shifts").delete().eq("created_by", userId)
+
+    if (shiftsError) {
+      console.error("Error deleting user shifts:", shiftsError)
+      return NextResponse.json({ error: "Failed to delete user shifts" }, { status: 500 })
+    }
+
+    // Option B: Or set assigned shifts to null instead of deleting them
+    const { error: assignedShiftsError } = await supabase
+      .from("shifts")
+      .update({ assigned_to: null })
+      .eq("assigned_to", userId)
+
+    if (assignedShiftsError) {
+      console.error("Error updating assigned shifts:", assignedShiftsError)
+      return NextResponse.json({ error: "Failed to update assigned shifts" }, { status: 500 })
+    }
+
+    // Add any other related table cleanup here
+    // For example:
+    // - time_off_requests
+    // - user_preferences
+    // - etc.
+
+    // Finally, delete the user
+    const { error: deleteError } = await supabase.from("users").delete().eq("id", userId)
+
+    if (deleteError) {
+      console.error("Error deleting user after cleanup:", deleteError)
+      return NextResponse.json({ error: "Failed to delete user after cleanup" }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error in manual deletion:", error)
+    return NextResponse.json({ error: "Failed to delete user manually" }, { status: 500 })
+  }
+}
+
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const supabase = createClient()
+    const userId = params.id
+
+    const { data: user, error } = await supabase.from("users").select("*").eq("id", userId).single()
+
+    if (error || !user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    return NextResponse.json(user)
+  } catch (error) {
+    console.error("Error fetching user:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

@@ -11,71 +11,97 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
-import type { User } from "@/types/database"
+import { Trash2, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 interface DeleteUserDialogProps {
-  isOpen: boolean
-  user: User | null
-  onClose: () => void
-  onUserDeleted: () => void
+  user: {
+    id: string
+    email: string
+    name?: string
+  }
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess: () => void
 }
 
-export function DeleteUserDialog({ isOpen, user, onClose, onUserDeleted }: DeleteUserDialogProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
+export function DeleteUserDialog({ user, open, onOpenChange, onSuccess }: DeleteUserDialogProps) {
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDelete = async () => {
-    if (!user) return
-
-    setError("")
+    setIsDeleting(true)
 
     try {
-      setIsLoading(true)
       const response = await fetch(`/api/admin/users/${user.id}`, {
         method: "DELETE",
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Errore nell'eliminazione dell'utente")
+        throw new Error(data.error || "Failed to delete user")
       }
 
-      onUserDeleted()
-    } catch (error: any) {
-      setError(error.message || "Si è verificato un errore")
-      setIsLoading(false)
+      toast.success("User deleted successfully")
+      onSuccess()
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Error deleting user:", error)
+
+      let errorMessage = "Failed to delete user"
+      if (error instanceof Error) {
+        if (error.message.includes("foreign key constraint")) {
+          errorMessage =
+            "Cannot delete user: they have associated data (shifts, etc.). Please remove their data first or contact support."
+        } else if (error.message.includes("admin")) {
+          errorMessage = "Cannot delete admin users"
+        } else {
+          errorMessage = error.message
+        }
+      }
+
+      toast.error(errorMessage)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Sei sicuro di voler eliminare questo utente?</AlertDialogTitle>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-destructive" />
+            Delete User
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            {user && (
-              <>
-                Stai per eliminare l'utente <strong>{user.name}</strong> ({user.email}).
-                <br />
-                Questa azione non può essere annullata e rimuoverà tutti i dati associati a questo utente.
-              </>
-            )}
+            Are you sure you want to delete <span className="font-semibold">{user.name || user.email}</span>?
+            <br />
+            <br />
+            <span className="text-destructive font-medium">
+              This action cannot be undone. This will permanently delete the user and all associated data including
+              shifts they created.
+            </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Annulla</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} disabled={isLoading} className="bg-red-600 hover:bg-red-700">
-            {isLoading ? "Eliminazione..." : "Elimina"}
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete User
+              </>
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
