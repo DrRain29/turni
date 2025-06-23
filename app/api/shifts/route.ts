@@ -66,7 +66,8 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServerClient()
 
-    let query = supabase
+    // Query per i turni senza join
+    let shiftsQuery = supabase
       .from("shifts")
       .select(`
         id,
@@ -78,18 +79,7 @@ export async function GET(request: NextRequest) {
         notes,
         status,
         created_at,
-        created_by,
-        users (
-          id,
-          name,
-          email
-        ),
-        shift_types (
-          id,
-          name,
-          color,
-          description
-        )
+        created_by
       `)
       .eq("status", "scheduled")
       .order("date", { ascending: true })
@@ -98,17 +88,48 @@ export async function GET(request: NextRequest) {
     if (weekStart) {
       const weekEnd = new Date(weekStart)
       weekEnd.setDate(weekEnd.getDate() + 6)
-      query = query.gte("date", weekStart).lte("date", weekEnd.toISOString().split("T")[0])
+      shiftsQuery = shiftsQuery.gte("date", weekStart).lte("date", weekEnd.toISOString().split("T")[0])
     }
 
-    const { data: shifts, error } = await query
+    const { data: shifts, error: shiftsError } = await shiftsQuery
 
-    if (error) {
-      console.error("Error fetching shifts:", error)
+    if (shiftsError) {
+      console.error("Error fetching shifts:", shiftsError)
       return NextResponse.json({ error: "Errore nel caricamento dei turni" }, { status: 500 })
     }
 
-    return NextResponse.json(shifts)
+    // Query separate per utenti e tipi di turno
+    const { data: users, error: usersError } = await supabase.from("users").select("id, name, email")
+
+    const { data: shiftTypes, error: shiftTypesError } = await supabase
+      .from("shift_types")
+      .select("id, name, color, description")
+
+    if (usersError || shiftTypesError) {
+      console.error("Error fetching related data:", { usersError, shiftTypesError })
+      return NextResponse.json({ error: "Errore nel caricamento dei dati correlati" }, { status: 500 })
+    }
+
+    // Combina i dati manualmente
+    const enrichedShifts = shifts?.map((shift) => {
+      const user = users?.find((u) => u.id === shift.user_id)
+      const shiftType = shiftTypes?.find((st) => st.id === shift.shift_type_id)
+
+      return {
+        ...shift,
+        users: user ? { id: user.id, name: user.name, email: user.email } : null,
+        shift_types: shiftType
+          ? {
+              id: shiftType.id,
+              name: shiftType.name,
+              color: shiftType.color,
+              description: shiftType.description,
+            }
+          : null,
+      }
+    })
+
+    return NextResponse.json(enrichedShifts || [])
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Errore del server" }, { status: 500 })
@@ -204,35 +225,36 @@ export async function POST(request: NextRequest) {
         created_by,
         status: "scheduled",
       })
-      .select(`
-        id,
-        user_id,
-        shift_type_id,
-        date,
-        start_time,
-        end_time,
-        notes,
-        status,
-        created_at,
-        created_by,
-        users (
-          id,
-          name,
-          email
-        ),
-        shift_types (
-          id,
-          name,
-          color,
-          description
-        )
-      `)
+      .select()
 
     if (error) {
+      console.error("Error creating shift:", error)
       return NextResponse.json({ error: "Errore nella creazione del turno" }, { status: 500 })
     }
 
-    return NextResponse.json(data[0])
+    // Recupera i dati correlati per la risposta
+    const { data: user } = await supabase.from("users").select("id, name, email").eq("id", user_id).single()
+
+    const { data: shiftType } = await supabase
+      .from("shift_types")
+      .select("id, name, color, description")
+      .eq("id", shift_type_id)
+      .single()
+
+    const enrichedShift = {
+      ...data[0],
+      users: user ? { id: user.id, name: user.name, email: user.email } : null,
+      shift_types: shiftType
+        ? {
+            id: shiftType.id,
+            name: shiftType.name,
+            color: shiftType.color,
+            description: shiftType.description,
+          }
+        : null,
+    }
+
+    return NextResponse.json(enrichedShift)
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Errore del server" }, { status: 500 })
