@@ -11,75 +11,71 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Trash2, Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
+import type { User } from "@/types/database"
 
 interface DeleteUserDialogProps {
-  user: {
-    id: string
-    email: string
-    name?: string
-  }
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess: () => void
+  isOpen: boolean
+  user: User | null
+  onClose: () => void
+  onUserDeleted: () => void
 }
 
-export function DeleteUserDialog({ user, open, onOpenChange, onSuccess }: DeleteUserDialogProps) {
-  const [isDeleting, setIsDeleting] = useState(false)
+export function DeleteUserDialog({ isOpen, user, onClose, onUserDeleted }: DeleteUserDialogProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleDelete = async () => {
-    setIsDeleting(true)
+    if (!user) return
+
+    setError("")
 
     try {
+      setIsLoading(true)
       const response = await fetch(`/api/admin/users/${user.id}`, {
         method: "DELETE",
       })
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || "Failed to delete user")
+        throw new Error(data.error || "Errore nell'eliminazione dell'utente")
       }
 
-      toast.success("User deleted successfully")
-      onSuccess()
-      onOpenChange(false)
-    } catch (error) {
-      console.error("Error deleting user:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to delete user")
-    } finally {
-      setIsDeleting(false)
+      onUserDeleted()
+    } catch (error: any) {
+      setError(error.message || "Si è verificato un errore")
+      setIsLoading(false)
     }
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            <Trash2 className="h-5 w-5 text-destructive" />
-            Delete User
-          </AlertDialogTitle>
+          <AlertDialogTitle>Sei sicuro di voler eliminare questo utente?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete <span className="font-semibold">{user.name || user.email}</span>? This
-            action cannot be undone.
+            {user && (
+              <>
+                Stai per eliminare l'utente <strong>{user.name}</strong> ({user.email}).
+                <br />
+                Questa azione non può essere annullata e rimuoverà tutti i dati associati a questo utente.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {isDeleting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Deleting...
-              </>
-            ) : (
-              "Delete"
-            )}
+          <AlertDialogCancel disabled={isLoading}>Annulla</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={isLoading} className="bg-red-600 hover:bg-red-700">
+            {isLoading ? "Eliminazione..." : "Elimina"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,48 +1,32 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { Inter } from "next/font/google"
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/contexts/auth-context"
+import { Navigation } from "@/components/navigation"
+
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Ferie Calendar Web",
-  description: "Sistema di gestione ferie e turni",
-  generator: "v0.dev",
+  title: "Entermed Portal - Gestione Turni e Ferie",
+  description: "Sistema di gestione turni e ferie per dipendenti Entermed",
+    generator: 'v0.dev'
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-14 items-center">
-              <div className="mr-4 hidden md:flex">
-                <a className="mr-6 flex items-center space-x-2" href="/">
-                  <span className="hidden font-bold sm:inline-block">Ferie Calendar</span>
-                </a>
-                <nav className="flex items-center space-x-6 text-sm font-medium">
-                  <a className="transition-colors hover:text-foreground/80 text-foreground/60" href="/">
-                    Dashboard
-                  </a>
-                  <a className="transition-colors hover:text-foreground/80 text-foreground/60" href="/calendar">
-                    Calendario
-                  </a>
-                  <a className="transition-colors hover:text-foreground/80 text-foreground/60" href="/vacations">
-                    Ferie
-                  </a>
-                  <a className="transition-colors hover:text-foreground/80 text-foreground/60" href="/admin">
-                    Admin
-                  </a>
-                </nav>
-              </div>
-            </div>
-          </header>
-          <main className="flex-1">{children}</main>
-        </ThemeProvider>
+    <html lang="it">
+      <body className={inter.className}>
+        <AuthProvider>
+          <div className="min-h-screen bg-gray-50">
+            <Navigation />
+            {children}
+          </div>
+        </AuthProvider>
       </body>
     </html>
   )
