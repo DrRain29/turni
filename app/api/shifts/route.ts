@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         status,
         created_at,
         created_by,
-        users (
+        users!shifts_user_id_fkey (
           id,
           name,
           email
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
         status,
         created_at,
         created_by,
-        users (
+        users!shifts_user_id_fkey (
           id,
           name,
           email
