@@ -10,21 +10,35 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     if (error) {
       console.error("Error deleting user:", error)
+
+      // Gestione specifica per errori di vincolo di chiave esterna
+      if (error.message.includes("foreign key constraint") || error.code === "23503") {
+        return NextResponse.json(
+          {
+            error: "Impossibile eliminare l'utente: ha dei turni associati. Rimuovi prima tutti i turni dell'utente.",
+          },
+          { status: 400 },
+        )
+      }
+
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting user:", error)
-    if (error.message.includes("foreign key constraint")) {
+
+    // Gestione dell'errore anche nel catch
+    if (error.message && (error.message.includes("foreign key constraint") || error.message.includes("violates"))) {
       return NextResponse.json(
         {
-          error: "Cannot delete user: they have associated shifts. Please remove their shifts first.",
+          error: "Impossibile eliminare l'utente: ha dei turni associati. Rimuovi prima tutti i turni dell'utente.",
         },
         { status: 400 },
       )
     }
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+
+    return NextResponse.json({ error: "Errore interno del server" }, { status: 500 })
   }
 }
 
