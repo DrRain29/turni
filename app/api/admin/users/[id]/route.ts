@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/server"
 
 // GET - Ottieni un utente specifico
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params
-    const supabase = createServerClient()
+    const supabase = createClient()
 
     const { data: user, error } = await supabase
       .from("users")
@@ -40,7 +40,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: "Nome e email sono campi obbligatori" }, { status: 400 })
     }
 
-    const supabase = createServerClient()
+    const supabase = createClient()
 
     // Verifica se l'utente esiste
     const { data: existingUser, error: checkError } = await supabase.from("users").select("id").eq("id", id).single()
@@ -103,7 +103,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const { id } = params
-    const supabase = createServerClient()
+    const supabase = createClient()
 
     // Verifica se l'utente esiste
     const { data: existingUser, error: checkError } = await supabase.from("users").select("id").eq("id", id).single()
