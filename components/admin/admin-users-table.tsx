@@ -49,7 +49,20 @@ export function AdminUsersTable({ users: initialUsers }: AdminUsersTableProps) {
                 <TableCell className="font-medium">{user.name || "N/A"}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role || "user"}</Badge>
+                  <Badge
+                    variant={
+                      user.role === "admin" ? "destructive" : user.role === "moderator" ? "default" : "secondary"
+                    }
+                    className={
+                      user.role === "admin"
+                        ? "bg-red-500 hover:bg-red-600"
+                        : user.role === "moderator"
+                          ? "bg-blue-500 hover:bg-blue-600"
+                          : ""
+                    }
+                  >
+                    {user.role === "admin" ? "ADMIN" : user.role === "moderator" ? "MOD" : "USER"}
+                  </Badge>
                 </TableCell>
                 <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
