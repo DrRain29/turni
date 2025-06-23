@@ -7,7 +7,7 @@ export async function GET() {
 
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, name, email, role")
+      .select("id, name, email, role, created_at")
       .order("name", { ascending: true })
 
     if (error) {
@@ -15,7 +15,7 @@ export async function GET() {
       return NextResponse.json({ error: "Errore nel caricamento degli utenti" }, { status: 500 })
     }
 
-    return NextResponse.json(users)
+    return NextResponse.json(users || [])
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Errore del server" }, { status: 500 })
